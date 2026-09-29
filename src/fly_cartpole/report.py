@@ -50,27 +50,35 @@ def plot_curves(results: dict[str, dict[int, list[int]]], path: Path) -> None:
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    figure, axis = plt.subplots(figsize=(9, 5), facecolor="#fcfcfb")
-    axis.set_facecolor("#fcfcfb")
-    for condition, by_seed in results.items():
-        curves = np.array([moving_average(np.array(lengths)) for lengths in by_seed.values()])
-        mean, spread = curves.mean(axis=0), curves.std(axis=0)
-        episodes = np.arange(1, curves.shape[1] + 1)
-        axis.fill_between(episodes, mean - spread, mean + spread, color=COLOURS[condition], alpha=0.12, linewidth=0)
-        axis.plot(episodes, mean, color=COLOURS[condition], linewidth=2, label=condition)
-    axis.axhline(500, color="#c3c2b7", linewidth=1, linestyle=":")
-    axis.set_xlabel("episode", color="#52514e")
-    axis.set_ylabel(f"episode length, {FINAL_WINDOW}-episode moving average", color="#52514e")
-    axis.set_title("Mushroom body learning CartPole (mean ± std over seeds)", color="#0b0b0b", loc="left")
-    axis.set_ylim(0, 510)
-    axis.grid(axis="y", color="#e1e0d9", linewidth=0.8)
-    axis.tick_params(colors="#898781")
-    for side in ("top", "right"):
-        axis.spines[side].set_visible(False)
-    for side in ("left", "bottom"):
-        axis.spines[side].set_color("#c3c2b7")
-    axis.legend(frameon=False, labelcolor="#0b0b0b", loc="upper left")
-    figure.tight_layout()
+    figure, (overview, zoom) = plt.subplots(1, 2, figsize=(12, 5), facecolor="#fcfcfb", gridspec_kw={"width_ratios": [3, 2]})
+    # The fly conditions sit near the floor of the overview, so a second panel repeats them on their own scale.
+    panels = (
+        (overview, tuple(results), (0, 510), "All conditions"),
+        (zoom, tuple(name for name in results if name.startswith("fly")), (0, 40), "Fly conditions, zoomed"),
+    )
+    for axis, conditions, limits, title in panels:
+        axis.set_facecolor("#fcfcfb")
+        for condition in conditions:
+            curves = np.array([moving_average(np.array(lengths)) for lengths in results[condition].values()])
+            mean, spread = curves.mean(axis=0), curves.std(axis=0)
+            episodes = np.arange(1, curves.shape[1] + 1)
+            axis.fill_between(episodes, mean - spread, mean + spread, color=COLOURS[condition], alpha=0.12, linewidth=0)
+            axis.plot(episodes, mean, color=COLOURS[condition], linewidth=2, label=condition)
+        axis.set_ylim(*limits)
+        axis.set_title(title, color="#0b0b0b", loc="left")
+        axis.set_xlabel("episode", color="#52514e")
+        axis.grid(axis="y", color="#e1e0d9", linewidth=0.8)
+        axis.tick_params(colors="#898781")
+        for side in ("top", "right"):
+            axis.spines[side].set_visible(False)
+        for side in ("left", "bottom"):
+            axis.spines[side].set_color("#c3c2b7")
+    overview.axhline(500, color="#c3c2b7", linewidth=1, linestyle=":")
+    overview.set_ylabel(f"episode length, {FINAL_WINDOW}-episode moving average", color="#52514e")
+    handles, labels = overview.get_legend_handles_labels()
+    figure.legend(handles, labels, loc="lower center", ncol=len(labels), frameon=False, labelcolor="#0b0b0b")
+    figure.suptitle("Mushroom body learning CartPole (mean ± std over seeds)", color="#0b0b0b", x=0.01, ha="left")
+    figure.tight_layout(rect=(0, 0.07, 1, 1))
     figure.savefig(path, dpi=150)
     plt.close(figure)
 

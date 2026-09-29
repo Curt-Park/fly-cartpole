@@ -1,0 +1,819 @@
+{
+  "episodes": 300,
+  "seeds": [
+    100,
+    101,
+    102,
+    103,
+    104
+  ],
+  "fly": [
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 26.97,
+      "per_seed": [
+        36.42,
+        9.77,
+        30.84,
+        30.73,
+        27.09
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 25.924,
+      "per_seed": [
+        31.69,
+        10.1,
+        40.97,
+        12.92,
+        33.94
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.1,
+        "beta": 3.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.25
+      },
+      "score": 24.606,
+      "per_seed": [
+        29.19,
+        15.97,
+        29.26,
+        25.47,
+        23.14
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.1,
+        "beta": 30.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 23.733999999999998,
+      "per_seed": [
+        25.3,
+        9.43,
+        55.12,
+        9.72,
+        19.1
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 23.552,
+      "per_seed": [
+        22.86,
+        15.76,
+        25.88,
+        26.94,
+        26.32
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.5,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 23.369999999999997,
+      "per_seed": [
+        22.5,
+        23.64,
+        21.92,
+        23.49,
+        25.3
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.5,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.1
+      },
+      "score": 23.172,
+      "per_seed": [
+        22.31,
+        25.02,
+        26.88,
+        18.89,
+        22.76
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.1,
+        "beta": 3.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 23.067999999999998,
+      "per_seed": [
+        21.75,
+        22.67,
+        25.9,
+        21.85,
+        23.17
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.1,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.1
+      },
+      "score": 22.822,
+      "per_seed": [
+        22.53,
+        20.78,
+        23.87,
+        23.94,
+        22.99
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.1,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 22.688,
+      "per_seed": [
+        22.74,
+        23.42,
+        24.45,
+        24.31,
+        18.52
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.1,
+        "beta": 10.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.25
+      },
+      "score": 22.604,
+      "per_seed": [
+        21.84,
+        23.96,
+        22.17,
+        21.31,
+        23.74
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.25
+      },
+      "score": 22.592000000000002,
+      "per_seed": [
+        21.62,
+        21.22,
+        24.48,
+        24.55,
+        21.09
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.5,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 22.503999999999998,
+      "per_seed": [
+        23.45,
+        22.9,
+        24.75,
+        20.04,
+        21.38
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.5,
+        "beta": 3.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 22.503999999999998,
+      "per_seed": [
+        21.38,
+        22.56,
+        23.79,
+        22.42,
+        22.37
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.1,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 22.31,
+      "per_seed": [
+        22.05,
+        21.2,
+        23.06,
+        22.44,
+        22.8
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.5,
+        "beta": 10.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.1
+      },
+      "score": 21.856,
+      "per_seed": [
+        21.61,
+        21.77,
+        22.5,
+        20.36,
+        23.04
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.1,
+        "beta": 30.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.25
+      },
+      "score": 21.738,
+      "per_seed": [
+        9.46,
+        22.38,
+        27.53,
+        25.3,
+        24.02
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.1,
+        "beta": 10.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 21.712000000000003,
+      "per_seed": [
+        28.57,
+        12.06,
+        34.17,
+        16.31,
+        17.45
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.25
+      },
+      "score": 21.672,
+      "per_seed": [
+        30.44,
+        10.8,
+        34.67,
+        14.87,
+        17.58
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.25
+      },
+      "score": 21.34,
+      "per_seed": [
+        30.1,
+        12.79,
+        25.34,
+        23.37,
+        15.1
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 20.566,
+      "per_seed": [
+        23.16,
+        19.9,
+        18.41,
+        19.47,
+        21.89
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.1,
+        "beta": 3.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.1
+      },
+      "score": 20.552,
+      "per_seed": [
+        24.82,
+        21.78,
+        18.91,
+        19.41,
+        17.84
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 20.46,
+      "per_seed": [
+        21.07,
+        22.18,
+        19.32,
+        20.05,
+        19.68
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.1
+      },
+      "score": 20.22,
+      "per_seed": [
+        22.42,
+        22.42,
+        20.04,
+        19.77,
+        16.45
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.5,
+        "beta": 10.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 19.738,
+      "per_seed": [
+        29.73,
+        11.94,
+        34.37,
+        10.61,
+        12.04
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.25
+      },
+      "score": 19.56,
+      "per_seed": [
+        33.12,
+        10.93,
+        31.75,
+        10.52,
+        11.48
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.1
+      },
+      "score": 19.29,
+      "per_seed": [
+        26.1,
+        20.75,
+        15.13,
+        17.09,
+        17.38
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 18.241999999999997,
+      "per_seed": [
+        22.75,
+        16.03,
+        15.76,
+        17.84,
+        18.83
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.1
+      },
+      "score": 18.014,
+      "per_seed": [
+        22.96,
+        15.8,
+        15.13,
+        18.39,
+        17.79
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.1,
+        "beta": 10.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.25
+      },
+      "score": 17.996,
+      "per_seed": [
+        9.62,
+        9.57,
+        33.19,
+        28.07,
+        9.53
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.5,
+        "beta": 10.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.25
+      },
+      "score": 17.651999999999997,
+      "per_seed": [
+        21.99,
+        9.36,
+        22.97,
+        23.19,
+        10.75
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.02,
+        "beta": 3.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.1
+      },
+      "score": 17.497999999999998,
+      "per_seed": [
+        22.77,
+        14.61,
+        13.86,
+        17.77,
+        18.48
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.1
+      },
+      "score": 17.119999999999997,
+      "per_seed": [
+        23.87,
+        13.42,
+        19.17,
+        14.26,
+        14.88
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.8,
+        "learning_rate": 0.02,
+        "beta": 30.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.25
+      },
+      "score": 16.567999999999998,
+      "per_seed": [
+        28.79,
+        10.52,
+        21.41,
+        10.6,
+        11.52
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.5,
+        "beta": 30.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.25
+      },
+      "score": 16.182,
+      "per_seed": [
+        25.08,
+        9.34,
+        27.53,
+        9.5,
+        9.46
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.02,
+        "beta": 30.0,
+        "gain_decay": 0.01,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 16.168,
+      "per_seed": [
+        35.87,
+        9.95,
+        15.98,
+        9.46,
+        9.58
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.95,
+        "learning_rate": 0.5,
+        "beta": 30.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 14.25,
+      "per_seed": [
+        9.34,
+        9.34,
+        21.99,
+        21.21,
+        9.37
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.02,
+        "beta": 30.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.5,
+        "action_fraction": 0.1
+      },
+      "score": 14.170000000000002,
+      "per_seed": [
+        12.8,
+        17.42,
+        14.02,
+        16.24,
+        10.37
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.3,
+        "learning_rate": 0.02,
+        "beta": 10.0,
+        "gain_decay": 0.0001,
+        "reward_per_step": 0.1,
+        "action_fraction": 0.25
+      },
+      "score": 13.85,
+      "per_seed": [
+        12.69,
+        9.92,
+        24.26,
+        12.15,
+        10.23
+      ]
+    },
+    {
+      "config": {
+        "trace_decay": 0.6,
+        "learning_rate": 0.5,
+        "beta": 30.0,
+        "gain_decay": 0.001,
+        "reward_per_step": 0.02,
+        "action_fraction": 0.1
+      },
+      "score": 10.078,
+      "per_seed": [
+        11.57,
+        9.48,
+        10.14,
+        9.75,
+        9.45
+      ]
+    }
+  ],
+  "td": [
+    {
+      "config": {
+        "td_actor_lr": 0.01,
+        "td_critic_lr": 0.2
+      },
+      "score": 233.24,
+      "per_seed": [
+        212.28,
+        372.68,
+        187.87,
+        147.8,
+        245.57
+      ]
+    },
+    {
+      "config": {
+        "td_actor_lr": 0.01,
+        "td_critic_lr": 0.05
+      },
+      "score": 187.33800000000002,
+      "per_seed": [
+        274.23,
+        170.21,
+        132.06,
+        139.23,
+        220.96
+      ]
+    },
+    {
+      "config": {
+        "td_actor_lr": 0.05,
+        "td_critic_lr": 0.05
+      },
+      "score": 172.346,
+      "per_seed": [
+        157.49,
+        9.5,
+        178.31,
+        191.41,
+        325.02
+      ]
+    },
+    {
+      "config": {
+        "td_actor_lr": 0.2,
+        "td_critic_lr": 0.05
+      },
+      "score": 119.452,
+      "per_seed": [
+        209.32,
+        24.99,
+        9.35,
+        9.32,
+        344.28
+      ]
+    },
+    {
+      "config": {
+        "td_actor_lr": 0.05,
+        "td_critic_lr": 0.2
+      },
+      "score": 83.86200000000001,
+      "per_seed": [
+        10.48,
+        346.92,
+        42.78,
+        9.54,
+        9.59
+      ]
+    },
+    {
+      "config": {
+        "td_actor_lr": 0.2,
+        "td_critic_lr": 0.2
+      },
+      "score": 81.054,
+      "per_seed": [
+        12.23,
+        9.46,
+        9.36,
+        224.62,
+        149.6
+      ]
+    }
+  ],
+  "left_right_kc_overlap": 0.06173122947416917
+}

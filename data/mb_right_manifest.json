@@ -1,0 +1,42 @@
+{
+  "source": "MaleCNS v1.0 (HHMI Janelia, Google Research and collaborators), CC BY 4.0",
+  "files": [
+    "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+    "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather"
+  ],
+  "counts": {
+    "pn": 343,
+    "kc": 1912,
+    "kc_dropped_off_pathway": 133,
+    "mbon": 49,
+    "dan": 332,
+    "pam": 316,
+    "ppl1": 16
+  },
+  "edges": {
+    "pn_kc": 11062,
+    "kc_mbon": 22534,
+    "dan_mbon": 1585
+  },
+  "synapses": {
+    "pn_kc": 195129,
+    "kc_mbon": 159085,
+    "dan_mbon": 20388
+  },
+  "pn_per_kc": {
+    "mean": 5.79,
+    "median": 6.0
+  },
+  "glomeruli": 83,
+  "mbon_valence": {
+    "approach": 28,
+    "avoidance": 21,
+    "neutral": 0
+  },
+  "cells_without_soma": {
+    "pn": 3,
+    "kc": 7,
+    "mbon": 1,
+    "dan": 0
+  }
+}

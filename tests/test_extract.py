@@ -94,3 +94,9 @@ def test_build_keeps_mbon_to_dopamine_feedback():
     arrays, manifest = build_circuit_arrays(annotations_table(), edges_table())
     assert arrays["mbon_dan"].tolist() == [[1, 0], [0, 3], [0, 0]]
     assert manifest["edges"]["mbon_dan"] == 2
+
+
+def test_build_selects_the_requested_hemisphere():
+    arrays, _ = build_circuit_arrays(annotations_table(), edges_table(), side="L")
+    assert arrays["pn_body_id"].tolist() == [4]
+    assert arrays["kc_body_id"].tolist() == []

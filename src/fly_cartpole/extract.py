@@ -1,4 +1,4 @@
-"""Cut the right mushroom body out of the MaleCNS v1.0 connectome."""
+"""Cut the left and right mushroom bodies out of the MaleCNS v1.0 connectome."""
 
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ from typing import TYPE_CHECKING
 
 import numpy as np
 
-from .paths import CACHE_DIR, CIRCUIT_PATH
+from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR
 
 if TYPE_CHECKING:
     import pandas as pd
@@ -35,18 +35,18 @@ def download_file(url: str, target: Path) -> Path:
     return target
 
 
-def select_populations(annotations: pd.DataFrame) -> dict[str, np.ndarray]:
+def select_populations(annotations: pd.DataFrame, side: str = "R") -> dict[str, np.ndarray]:
     cell_class = annotations["class"].fillna("")
     cell_type = annotations["type"].fillna("")
-    right = annotations["somaSide"].fillna("") == "R"
+    on_side = annotations["somaSide"].fillna("") == side
 
     def body_ids(mask) -> np.ndarray:
         return np.sort(annotations.loc[mask, "bodyId"].to_numpy(dtype=np.int64))
 
     return {
-        "pn": body_ids((cell_class == "ALPN") & right),
-        "kc": body_ids((cell_class == "Kenyon_Cell") & right),
-        "mbon": body_ids((cell_class == "MBON") & right),
+        "pn": body_ids((cell_class == "ALPN") & on_side),
+        "kc": body_ids((cell_class == "Kenyon_Cell") & on_side),
+        "mbon": body_ids((cell_class == "MBON") & on_side),
         "pam": body_ids(cell_type.str.startswith("PAM")),
         "ppl1": body_ids(cell_type.str.startswith("PPL1")),
     }
@@ -91,8 +91,8 @@ def soma_positions(annotations: pd.DataFrame, body_ids: np.ndarray) -> np.ndarra
     return positions
 
 
-def build_circuit_arrays(annotations: pd.DataFrame, edges: pd.DataFrame) -> tuple[dict[str, np.ndarray], dict]:
-    populations = select_populations(annotations)
+def build_circuit_arrays(annotations: pd.DataFrame, edges: pd.DataFrame, side: str = "R") -> tuple[dict[str, np.ndarray], dict]:
+    populations = select_populations(annotations, side)
     pn, kc_candidates, mbon = populations["pn"], populations["kc"], populations["mbon"]
     dan = np.concatenate([populations["pam"], populations["ppl1"]])
     dan_is_punishment = np.concatenate(
@@ -167,14 +167,16 @@ def save_circuit(arrays: dict[str, np.ndarray], manifest: dict, path: Path = CIR
     path.with_name(path.stem + "_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
 
 
-def extract(cache_dir: Path = CACHE_DIR, out_path: Path = CIRCUIT_PATH) -> dict:
+def extract(cache_dir: Path = CACHE_DIR, data_dir: Path = DATA_DIR) -> dict[str, dict]:
     import pandas as pd
 
     annotations_path = download_file(BASE_URL + ANNOTATIONS_FILE, cache_dir / ANNOTATIONS_FILE)
     weights_path = download_file(BASE_URL + WEIGHTS_FILE, cache_dir / WEIGHTS_FILE)
     annotations = pd.read_feather(annotations_path)
-    populations = select_populations(annotations)
-    edges = read_edges(weights_path, np.concatenate(list(populations.values())))
-    arrays, manifest = build_circuit_arrays(annotations, edges)
-    save_circuit(arrays, manifest, out_path)
-    return manifest
+    manifests = {}
+    for side, name in (("R", "mb_right.npz"), ("L", "mb_left.npz")):
+        populations = select_populations(annotations, side)
+        edges = read_edges(weights_path, np.concatenate(list(populations.values())))
+        arrays, manifests[side] = build_circuit_arrays(annotations, edges, side)
+        save_circuit(arrays, manifests[side], data_dir / name)
+    return manifests

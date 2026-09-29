@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .paths import CACHE_DIR, CIRCUIT_PATH, RESULTS_DIR, WEB_DATA_DIR
+from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, RESULTS_DIR, WEB_DATA_DIR
 
 EVALUATION_SEEDS = "0-9"
 
@@ -35,9 +35,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="fly-cartpole", description="A connectome mushroom body learning CartPole.")
     commands = parser.add_subparsers(dest="command", required=True)
 
-    extract = commands.add_parser("extract", help="download MaleCNS v1.0 and build data/mb_right.npz")
+    extract = commands.add_parser("extract", help="download MaleCNS v1.0 and build data/mb_right.npz and data/mb_left.npz")
     extract.add_argument("--cache", type=Path, default=CACHE_DIR)
-    extract.add_argument("--circuit", type=Path, default=CIRCUIT_PATH)
+    extract.add_argument("--data", type=Path, default=DATA_DIR)
 
     tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-104")
     tune.add_argument("--configs", type=int, default=20)
@@ -64,7 +64,7 @@ def main(argv: list[str] | None = None) -> None:
     if args.command == "extract":
         from .extract import extract
 
-        print(json.dumps(extract(args.cache, args.circuit), indent=2))
+        print(json.dumps(extract(args.cache, args.data), indent=2))
         return
 
     from .params import HYPERPARAMETERS_FILE, load_hyperparameters

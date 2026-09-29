@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 440" role="img" aria-labelledby="title">
+  <title id="title">A fruit fly on a cart, sweating as it holds a wobbling pole upright</title>
+  <defs>
+    <clipPath id="abdomen">
+      <ellipse cx="315" cy="262" rx="30" ry="38"/>
+    </clipPath>
+    <path id="drop" d="M0,-13 C6,-5 9,2 0,9 C-9,2 -6,-5 0,-13 Z"/>
+    <pattern id="facets" width="5" height="5" patternUnits="userSpaceOnUse">
+      <circle cx="2.5" cy="2.5" r="1.1" fill="#9e1328" opacity="0.55"/>
+    </pattern>
+  </defs>
+
+  <rect width="800" height="440" rx="24" fill="#fbf7ef"/>
+
+  <!-- track -->
+  <ellipse cx="400" cy="392" rx="150" ry="10" fill="#e6dfcf"/>
+  <line x1="60" y1="386" x2="740" y2="386" stroke="#b9b2a3" stroke-width="4" stroke-linecap="round"/>
+  <g stroke="#cfc8b8" stroke-width="3" stroke-linecap="round">
+    <line x1="120" y1="394" x2="120" y2="402"/><line x1="240" y1="394" x2="240" y2="402"/>
+    <line x1="560" y1="394" x2="560" y2="402"/><line x1="680" y1="394" x2="680" y2="402"/>
+  </g>
+
+  <!-- cart -->
+  <rect x="290" y="300" width="220" height="62" rx="14" fill="#6b7a8f"/>
+  <rect x="290" y="300" width="220" height="14" rx="7" fill="#7d8ca2"/>
+  <circle cx="340" cy="368" r="18" fill="#3d4654"/><circle cx="340" cy="368" r="6" fill="#c9cfd8"/>
+  <circle cx="460" cy="368" r="18" fill="#3d4654"/><circle cx="460" cy="368" r="6" fill="#c9cfd8"/>
+
+  <!-- wings, behind the pole and body -->
+  <g fill="#d6e8fb" fill-opacity="0.75" stroke="#7f9bb8" stroke-width="2">
+    <ellipse cx="262" cy="212" rx="58" ry="21" transform="rotate(-28 262 212)"/>
+    <ellipse cx="266" cy="238" rx="50" ry="17" transform="rotate(-8 266 238)"/>
+  </g>
+  <g stroke="#9db4cc" stroke-width="1.5" fill="none">
+    <path d="M300 220 Q262 200 222 184"/><path d="M300 226 Q260 214 216 204"/>
+    <path d="M302 240 Q262 236 220 236"/>
+  </g>
+
+  <!-- pole, wobbling -->
+  <g transform="rotate(8 400 304)">
+    <rect x="393" y="52" width="14" height="252" rx="7" fill="#d9a441" stroke="#b07f2a" stroke-width="2"/>
+    <circle cx="400" cy="52" r="16" fill="#e05d5d" stroke="#b8403f" stroke-width="2"/>
+  </g>
+  <circle cx="400" cy="304" r="8" fill="#3d4654"/>
+  <g stroke="#b9b2a3" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M458 44 q14 20 2 42"/><path d="M474 34 q22 30 4 64"/>
+    <path d="M396 40 q-14 20 -2 42"/>
+  </g>
+
+  <!-- hind and middle legs on the cart -->
+  <g stroke="#5a3b1d" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="302,272 276,282 268,300"/>
+    <polyline points="328,274 352,284 358,300"/>
+    <polyline points="300,236 270,256 262,300"/>
+    <polyline points="330,236 362,258 372,300"/>
+  </g>
+
+  <!-- abdomen with stripes -->
+  <ellipse cx="315" cy="262" rx="30" ry="38" fill="#d8a355"/>
+  <g clip-path="url(#abdomen)" fill="#5a3b1d">
+    <rect x="280" y="262" width="70" height="7"/>
+    <rect x="280" y="276" width="70" height="8"/>
+    <rect x="280" y="291" width="70" height="12"/>
+  </g>
+
+  <!-- thorax with bristles -->
+  <ellipse cx="318" cy="215" rx="29" ry="25" fill="#c98f45"/>
+  <g stroke="#5a3b1d" stroke-width="2" stroke-linecap="round">
+    <line x1="306" y1="196" x2="302" y2="188"/><line x1="318" y1="193" x2="318" y2="185"/>
+    <line x1="330" y1="196" x2="334" y2="188"/>
+  </g>
+
+  <!-- front legs gripping the pole -->
+  <g stroke="#5a3b1d" stroke-width="4.5" fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <polyline points="336,208 372,196 404,208"/>
+    <polyline points="338,222 376,232 407,238"/>
+  </g>
+  <circle cx="406" cy="208" r="5" fill="#5a3b1d"/>
+  <circle cx="409" cy="238" r="5" fill="#5a3b1d"/>
+
+  <!-- head -->
+  <circle cx="322" cy="168" r="27" fill="#d9a35a"/>
+  <g>
+    <ellipse cx="305" cy="166" rx="14" ry="17" fill="#d7263d"/>
+    <ellipse cx="305" cy="166" rx="14" ry="17" fill="url(#facets)"/>
+    <ellipse cx="341" cy="166" rx="14" ry="17" fill="#d7263d"/>
+    <ellipse cx="341" cy="166" rx="14" ry="17" fill="url(#facets)"/>
+    <ellipse cx="300" cy="158" rx="4" ry="5" fill="#ffffff"/>
+    <ellipse cx="336" cy="158" rx="4" ry="5" fill="#ffffff"/>
+  </g>
+  <!-- worried brows and a wobbly mouth -->
+  <g stroke="#5a3b1d" stroke-width="3.5" fill="none" stroke-linecap="round">
+    <path d="M293 146 L312 139"/>
+    <path d="M334 139 L353 146"/>
+    <path d="M313 190 q4 -4 8 0 q4 4 8 0"/>
+  </g>
+  <!-- antennae -->
+  <g stroke="#5a3b1d" stroke-width="3" fill="none" stroke-linecap="round">
+    <path d="M316 144 L308 128"/><path d="M328 144 L336 128"/>
+    <path d="M308 128 l-8 -4 M308 128 l-3 -8 M336 128 l8 -4 M336 128 l3 -8" stroke-width="2"/>
+  </g>
+
+  <!-- sweat, a lot of it -->
+  <g fill="#6cb4ee" stroke="#3f8fcf" stroke-width="1.5">
+    <use href="#drop" transform="translate(276 146) rotate(-30) scale(1.5)"/>
+    <use href="#drop" transform="translate(372 138) rotate(28) scale(1.5)"/>
+    <use href="#drop" transform="translate(258 186) rotate(-55) scale(1.1)"/>
+    <use href="#drop" transform="translate(384 182) rotate(50) scale(1.1)"/>
+    <use href="#drop" transform="translate(236 118) rotate(-45) scale(1.0)"/>
+    <use href="#drop" transform="translate(410 112) rotate(45) scale(1.0)"/>
+    <use href="#drop" transform="translate(214 150) rotate(-70) scale(0.8)"/>
+    <use href="#drop" transform="translate(432 150) rotate(70) scale(0.8)"/>
+    <use href="#drop" transform="translate(300 128) rotate(-10) scale(0.9)"/>
+    <use href="#drop" transform="translate(348 124) rotate(12) scale(0.9)"/>
+    <use href="#drop" transform="translate(296 204) scale(0.9)"/>
+    <use href="#drop" transform="translate(342 232) scale(0.8)"/>
+    <use href="#drop" transform="translate(252 290) scale(0.9)"/>
+    <use href="#drop" transform="translate(384 292) scale(0.8)"/>
+  </g>
+  <g fill="#6cb4ee" fill-opacity="0.45">
+    <ellipse cx="262" cy="303" rx="16" ry="3"/>
+    <ellipse cx="386" cy="303" rx="12" ry="3"/>
+  </g>
+  <g fill="#ffffff">
+    <ellipse cx="272" cy="141" rx="2.5" ry="4" transform="rotate(-30 272 141)"/>
+    <ellipse cx="368" cy="133" rx="2.5" ry="4" transform="rotate(28 368 133)"/>
+    <ellipse cx="255" cy="182" rx="2" ry="3" transform="rotate(-55 255 182)"/>
+    <ellipse cx="381" cy="178" rx="2" ry="3" transform="rotate(50 381 178)"/>
+  </g>
+  <g stroke="#9fcdf2" stroke-width="2.5" stroke-linecap="round">
+    <line x1="222" y1="106" x2="210" y2="96"/><line x1="224" y1="122" x2="208" y2="120"/>
+    <line x1="200" y1="146" x2="188" y2="140"/><line x1="426" y1="100" x2="438" y2="90"/>
+    <line x1="424" y1="116" x2="440" y2="114"/><line x1="446" y1="146" x2="458" y2="140"/>
+  </g>
+</svg>

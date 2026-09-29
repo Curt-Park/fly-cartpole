@@ -1,6 +1,8 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
+import { framesDue } from "./playback.js";
+
 const STEPS_PER_SECOND = 50; // CartPole advances 0.02 s per step
 const HOLD_LAST_FRAME_MS = 1200;
 const COLOURS = {
@@ -184,14 +186,20 @@ function render() {
 }
 
 function tick(now) {
-  const elapsed = now - lastTick;
   const stepMs = 1000 / (STEPS_PER_SECOND * Number(elements.speed.value));
-  if (playing && elapsed >= stepMs) {
-    lastTick = now;
-    if (frameIndex < frames.step.length - 1) {
-      frameIndex += 1;
-      rewardGlow *= 0.85;
-      punishGlow *= 0.92;
+  const due = playing ? framesDue(now - lastTick, stepMs) : 0;
+  if (!playing) lastTick = now;
+  if (due > 0) {
+    lastTick += due * stepMs;
+    const advance = Math.min(due, frames.step.length - 1 - frameIndex);
+    if (advance > 0) {
+      for (let frame = 0; frame < advance; frame += 1) {
+        frameIndex += 1;
+        rewardGlow *= 0.85;
+        punishGlow *= 0.92;
+        if (frames.reward[frameIndex] > 0) rewardGlow = 1;
+        if (frames.punish[frameIndex] > 0) punishGlow = 1;
+      }
       render();
     } else if (heldSince === null) {
       heldSince = now;

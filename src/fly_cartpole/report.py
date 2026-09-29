@@ -13,6 +13,8 @@ from .run import CONDITIONS, run_many, save_lengths
 FINAL_WINDOW = 100
 # Validated categorical order (light surface); summary.md is the table view for the low-contrast slots.
 COLOURS = {"fly": "#2a78d6", "fly-best": "#eb6834", "fly-shuffled": "#1baf7a", "fly-frozen": "#eda100", "td": "#e87ba4"}
+# The random policy is a chance reference, drawn in neutral ink rather than as a sixth series.
+REFERENCE_COLOUR = "#898781"
 CLAIMS = (
     ("learning", "fly", "fly-frozen", "greater"),
     ("wiring contributes", "fly", "fly-shuffled", "greater"),
@@ -54,7 +56,7 @@ def plot_curves(results: dict[str, dict[int, list[int]]], path: Path) -> None:
     # The fly conditions sit near the floor of the overview, so a second panel repeats them on their own scale.
     panels = (
         (overview, tuple(results), (0, 510), "All conditions"),
-        (zoom, tuple(name for name in results if name.startswith("fly")), (0, 40), "Fly conditions, zoomed"),
+        (zoom, tuple(name for name in results if name.startswith("fly") or name == "random"), (0, 40), "Fly conditions, zoomed"),
     )
     for axis, conditions, limits, title in panels:
         axis.set_facecolor("#fcfcfb")
@@ -62,6 +64,9 @@ def plot_curves(results: dict[str, dict[int, list[int]]], path: Path) -> None:
             curves = np.array([moving_average(np.array(lengths)) for lengths in results[condition].values()])
             mean, spread = curves.mean(axis=0), curves.std(axis=0)
             episodes = np.arange(1, curves.shape[1] + 1)
+            if condition == "random":
+                axis.plot(episodes, mean, color=REFERENCE_COLOUR, linewidth=1.5, linestyle="--", label="random (chance)")
+                continue
             axis.fill_between(episodes, mean - spread, mean + spread, color=COLOURS[condition], alpha=0.12, linewidth=0)
             axis.plot(episodes, mean, color=COLOURS[condition], linewidth=2, label=condition)
         axis.set_ylim(*limits)

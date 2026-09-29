@@ -1,3 +1,4 @@
+import numpy as np
 import pytest
 
 from fly_cartpole.circuit import load_circuit
@@ -40,3 +41,11 @@ def test_run_many_keeps_job_order(circuit_path):
 def test_results_round_trip(tmp_path):
     save_lengths("fly", 2, [10, 20], PARAMS, tmp_path)
     assert load_lengths("fly", tmp_path) == {2: [10, 20]}
+
+
+def test_random_reference_presses_both_buttons_and_never_learns(circuit_path):
+    agent, _ = make_agent("random", load_circuit(circuit_path), PARAMS, seed=0)
+    actions = {agent.act(np.zeros(4)).action for _ in range(50)}
+    agent.learn(punish=1.0, reward=0.0, next_state=np.zeros(4), terminated=True)
+    assert actions == {0, 1}
+    assert "random" in CONDITIONS

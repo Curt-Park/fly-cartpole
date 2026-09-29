@@ -5,11 +5,13 @@ connectome, tries to learn Gymnasium's CartPole with the fly's own dopamine-gate
 plasticity rule. A web viewer replays which mushroom body neurons light up while it
 balances the pole.
 
-**Result: the fly's rule does not learn to balance the pole.** Learning moves the fly
-from a one-sided innate bias up to chance level (about 22 steps, the same as pressing
-random buttons) and stops there. A TD actor-critic trained on the *same* Kenyon cell
-code reaches 272 steps on average, so the Kenyon cell code carries enough information;
-the bottleneck is the learning rule.
+**Result: with the dopamine schedule and encoder used here, the fly's rule does not
+learn to balance the pole.** Learning moves the fly from a one-sided innate bias up to
+chance level (the `random` reference below) and stops there. A TD actor-critic trained on
+the same Kenyon cell layer, fed the state without the action glomeruli, reaches 272 steps
+on average. So the Kenyon cell layer carries enough state information, and the bottleneck
+is the learning rule as set up here: dopamine that arrives only when the pole falls and
+while an episode beats the baseline.
 
 ![Learning curves](results/learning_curves.png)
 
@@ -20,21 +22,23 @@ the bottleneck is the learning rule.
 | `fly-shuffled` (degree-preserving random wiring) | 26.0 ± 3.7 | 0% |
 | `fly-frozen` (no plasticity) | 12.6 ± 3.0 | 0% |
 | `td` (TD actor-critic on the same KC code) | 272.4 ± 147.7 | 29% |
-| random buttons (reference, 1,000 episodes) | 22.6 | 0% |
+| `random` (uniform random buttons, chance reference) | 22.2 ± 1.0 | 0% |
 
 Permutation tests on per-seed final-100 means (full table in [results/summary.md](results/summary.md)):
 
 - `fly` > `fly-frozen`: p = 0.003. The frozen fly's innate preferences push the cart one
   way and it falls in about 13 steps; plasticity removes that bias within the first few dozen
   episodes. That is the whole effect.
-- `fly` > `fly-shuffled`: p = 0.94. The measured wiring does not help; shuffled wiring
-  does slightly better.
+- `fly` > `fly-shuffled`: p = 0.94. There is no evidence that the measured wiring helps;
+  shuffled wiring scored 26.0 (the opposite direction was not tested).
 - `fly` vs `fly-best`: p = 0.07 (two-sided). Rewarding only record-breaking runs is,
   if anything, worse than rewarding runs longer than the recent mean.
 
 Hyperparameters were searched on separate tuning seeds (100-104; 40 fly settings, 6 TD
 settings) and applied unchanged to evaluation seeds 0-9. The best fly setting scored 27
-steps on the tuning seeds. See [results/tuning.json](results/tuning.json).
+steps on the tuning seeds. It sits at the edge of the grid for two parameters (the longest
+trace, 0.95, and the smallest learning rate, 0.02), so the search does not rule out
+settings beyond it. See [results/tuning.json](results/tuning.json).
 
 ## How it works
 
@@ -77,7 +81,7 @@ an eligibility trace long enough to reach the mistake, the whole short episode i
 punished almost equally; with a short trace, only the last hopeless steps are. The TD
 learner has a critic that predicts trouble before the fall and turns every step into a
 signed teaching signal. The fly rule has no such prediction, and no setting in the
-search found a way around that. This matches earlier attempts to put mushroom body
+searched grid found a way around that. This matches earlier attempts to put mushroom body
 plasticity on control tasks (DOOMFLY, FlyPong), while associative choice tasks
 (fly-blackjack) do work.
 
@@ -121,7 +125,9 @@ at the brain surface, so a dot identifies a neuron, not where its synapses compu
 - Rate units, no spikes, no APL, KC→KC or MBON→MBON connections.
 - MBON valence labels follow the compartmental account and were not checked against
   individually characterised MBONs.
-- One dataset, one hemisphere, ten evaluation seeds.
+- One dataset, one hemisphere, ten evaluation seeds. Each seed also draws its own
+  glomerulus-to-variable assignment, shared by every condition of that seed, so the
+  spread across seeds mixes that assignment with learning noise.
 
 ## Credits
 

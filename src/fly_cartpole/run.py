@@ -18,13 +18,14 @@ from .fly_agent import Decision, FlyAgent
 from .mushroom_body import MushroomBody
 from .params import Hyperparameters
 from .paths import CIRCUIT_PATH, RESULTS_DIR
+from .random_agent import RandomAgent
 from .td_agent import TDAgent
 
-CONDITIONS = ("fly", "fly-best", "fly-shuffled", "fly-frozen", "td")
+CONDITIONS = ("fly", "fly-best", "fly-shuffled", "fly-frozen", "td", "random")
 StepCallback = Callable[[int, int, np.ndarray, Decision, float, float, "float | None"], None]
 
 
-def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: int) -> tuple[FlyAgent | TDAgent, DopamineSchedule]:
+def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: int) -> tuple[FlyAgent | TDAgent | RandomAgent, DopamineSchedule]:
     if condition not in CONDITIONS:
         raise ValueError(f"condition must be one of {CONDITIONS}, got {condition!r}")
     rng = np.random.default_rng(seed)
@@ -36,6 +37,8 @@ def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: 
     # Same seed, same glomerulus assignment: conditions are paired per seed.
     encoder = build_encoder(circuit.pn_glomerulus, params.action_fraction, params.tuning_width, seed)
     schedule = DopamineSchedule("best" if condition == "fly-best" else "mean", params.baseline_window, params.reward_per_step)
+    if condition == "random":
+        return RandomAgent(encoder, body.n_kc, rng), schedule
     agent_class = TDAgent if condition == "td" else FlyAgent
     return agent_class(body, encoder, params, rng), schedule
 

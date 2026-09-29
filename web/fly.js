@@ -31,7 +31,8 @@ export function hemisphere(side, activity, trained) {
     const level = kc[kcRows[edge]];
     if (level) mbon[mbonCols[edge]] += level * weights[edge];
   }
-  let value = 0;
+  // The exported offset is the hemisphere's homeostatic set point.
+  let value = -(side.offset ?? 0);
   side.mbon_valence.forEach((sign, index) => { value += sign * mbon[index]; });
   return { kc, active: winners.filter((index) => kc[index] > 0), mbon, value };
 }

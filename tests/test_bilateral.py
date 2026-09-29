@@ -51,3 +51,15 @@ def test_doing_better_than_expected_raises_the_chosen_value(circuit_path):
     before = fly.values(STATE)[decision.action]
     fly.learn(punish=0.0, reward=1.0, next_state=STATE, terminated=True)
     assert fly.values(STATE)[decision.action] > before
+
+
+def test_centred_hemispheres_start_with_no_average_preference(circuit_path):
+    fly = make(circuit_path, bilateral_centre=True)
+    average = np.mean([fly.values(state) for state in fly.calibration_states], axis=0)
+    assert np.allclose(average, 0.0, atol=1e-12)
+    assert fly.offsets.any()
+
+
+def test_uncentred_hemispheres_keep_their_innate_offset(circuit_path):
+    fly = make(circuit_path, bilateral_centre=False)
+    assert not fly.offsets.any()

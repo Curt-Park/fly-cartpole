@@ -5,12 +5,13 @@ from __future__ import annotations
 import numpy as np
 
 from .circuit import Circuit
-from .encoder import LEFT, RIGHT, Encoder, build_encoder
+from .encoder import LEFT, RIGHT, STATE_LIMITS, Encoder, build_encoder
 from .fly_agent import Decision, depress
 from .mushroom_body import MushroomBody
 from .params import Hyperparameters
 
 SIDES = (LEFT, RIGHT)
+CALIBRATION_STATES = 256
 
 
 class BilateralFly:
@@ -24,6 +25,11 @@ class BilateralFly:
         self.params = params
         self.rng = rng
         self.gains = [np.ones((body.n_kc, body.n_mbon)) for body in bodies]
+        self.offsets = np.zeros(len(SIDES))
+        # Homeostatic set point: each hemisphere's innate average value over typical states is taken as zero.
+        self.calibration_states = np.random.default_rng(0).uniform(-0.5, 0.5, size=(CALIBRATION_STATES, len(STATE_LIMITS))) * STATE_LIMITS
+        if params.bilateral_centre:
+            self.offsets = np.mean([self.values(state) for state in self.calibration_states], axis=0)
         self.reset_episode()
 
     def reset_episode(self) -> None:
@@ -33,7 +39,7 @@ class BilateralFly:
         body = self.bodies[side]
         kc = body.kenyon(glomeruli[self.pn_groups[side]])
         mbon = body.mbon(kc, self.gains[side])
-        return kc, mbon, float(mbon @ body.mbon_valence)
+        return kc, mbon, float(mbon @ body.mbon_valence) - self.offsets[side]
 
     def values(self, state: np.ndarray) -> np.ndarray:
         glomeruli = self.encoder.glomeruli(state, None)

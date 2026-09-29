@@ -29,7 +29,7 @@ def naive_values(fly: BilateralFly, state: np.ndarray) -> list[float]:
     values = []
     for side, body in zip(SIDES, fly.bodies):
         kc = body.kenyon(glomeruli[fly.pn_groups[side]])
-        values.append(float((kc @ body.kc_mbon) @ body.mbon_valence))
+        values.append(float((kc @ body.kc_mbon) @ body.mbon_valence) - fly.offsets[side])
     return values
 
 
@@ -63,6 +63,7 @@ def export_model(fly: BilateralFly, baseline: float | None, seed: int) -> dict:
             "kc_mbon_naive": body.kc_mbon[rows, cols].tolist(),
             "kc_mbon_trained": (body.kc_mbon * fly.gains[side])[rows, cols].tolist(),
             "mbon_valence": body.mbon_valence.astype(int).tolist(),
+            "offset": float(fly.offsets[side]),
             "dan_mbon": sparse(body.dan_mbon),
         })
     states = np.random.default_rng(seed).uniform(-STATE_LIMITS, STATE_LIMITS, size=(12, len(STATE_LIMITS))) * 0.5

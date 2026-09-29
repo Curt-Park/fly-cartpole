@@ -12,7 +12,8 @@ def kenyon_code(drive: np.ndarray, k: int) -> np.ndarray:
     code = np.zeros_like(drive)
     if drive.max() <= 0:
         return code
-    winners = np.argpartition(drive, -k)[-k:]
+    # Stable order breaks ties toward the lowest index, which the browser viewer reproduces exactly.
+    winners = np.argsort(-drive, kind="stable")[:k]
     code[winners] = drive[winners]
     return code / code.max()
 

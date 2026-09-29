@@ -52,10 +52,10 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--seeds", default=EVALUATION_SEEDS)
     add_run_options(compare, episodes=1000)
 
-    record = commands.add_parser("record", help="record a naive and a trained episode for the web viewer")
-    record.add_argument("--seed", type=int, default=0)
-    record.add_argument("--web-data", type=Path, default=WEB_DATA_DIR)
-    add_run_options(record, episodes=1000)
+    export = commands.add_parser("export", help="train the bilateral fly and export it for the live web viewer")
+    export.add_argument("--seed", type=int, default=0)
+    export.add_argument("--web-data", type=Path, default=WEB_DATA_DIR)
+    add_run_options(export, episodes=1000)
     return parser
 
 
@@ -88,7 +88,7 @@ def main(argv: list[str] | None = None) -> None:
         from .report import compare
 
         print(compare(parse_seeds(args.seeds), args.episodes, params, args.workers, args.circuit, args.results))
-    elif args.command == "record":
-        from .record import record
+    elif args.command == "export":
+        from .export import export
 
-        print(json.dumps(record(args.seed, args.episodes, params, args.circuit, args.web_data), indent=2))
+        print(json.dumps(export(args.seed, args.episodes, params, args.circuit, web_data_dir=args.web_data), indent=2))

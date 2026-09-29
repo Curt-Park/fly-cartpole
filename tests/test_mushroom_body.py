@@ -23,3 +23,8 @@ def test_dopamine_lands_only_where_each_population_innervates(circuit_path):
     body = MushroomBody(load_circuit(circuit_path), kc_sparsity=0.1)
     assert np.flatnonzero(body.dopamine_at_mbon(punish=1.0, reward=0.0)).tolist() == [2, 3]
     assert np.flatnonzero(body.dopamine_at_mbon(punish=0.0, reward=1.0)).tolist() == [0, 1, 2]
+
+
+def test_kenyon_ties_go_to_the_lowest_index_so_the_browser_can_match():
+    code = kenyon_code(np.ones(20), k=3)
+    assert np.flatnonzero(code).tolist() == [0, 1, 2]

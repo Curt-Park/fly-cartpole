@@ -39,3 +39,10 @@ def test_the_value_of_a_punished_state_drops(circuit_path):
     td.act(STATE)
     td.learn(punish=1.0, reward=0.0, next_state=STATE, terminated=True)
     assert td.state_value(STATE) < 0.0
+
+
+def test_one_critic_update_never_overshoots_its_target(circuit_path):
+    td = make_td(circuit_path, td_critic_lr=1.0)
+    td.act(STATE)
+    td.learn(punish=1.0, reward=0.0, next_state=STATE, terminated=True)
+    assert -1.0 <= td.state_value(STATE) < 0.0

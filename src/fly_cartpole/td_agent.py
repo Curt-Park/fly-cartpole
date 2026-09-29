@@ -58,5 +58,6 @@ class TDAgent:
         score[action] += 1.0
         self.critic_trace = decay * self.critic_trace + kc
         self.actor_trace = decay * self.actor_trace + params.beta * np.outer(score, kc)
-        self.value += params.td_critic_lr * td_error * self.critic_trace
-        self.preferences += params.td_actor_lr * td_error * self.actor_trace
+        # Divide by the active-cell count so one update cannot overshoot its target (tile-coding convention).
+        self.value += params.td_critic_lr / self.body.k * td_error * self.critic_trace
+        self.preferences += params.td_actor_lr / self.body.k * td_error * self.actor_trace

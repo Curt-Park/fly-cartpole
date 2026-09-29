@@ -71,7 +71,8 @@ class BilateralFly:
             next_values = self.values(next_state)
             p_left = self.choice_probability(*next_values)
             upcoming = p_left * next_values[LEFT] + (1.0 - p_left) * next_values[RIGHT]
-        error = reward - punish + self.params.gamma * upcoming - predicted
+        # Outcomes are scaled into the value range that bounded gains can express.
+        error = self.params.bilateral_outcome_scale * (reward - punish) + self.params.gamma * upcoming - predicted
         self.released = (max(-error, 0.0), max(error, 0.0))
         worse, better = self.released
         push_pull = self.params.bilateral_plasticity == "push-pull"

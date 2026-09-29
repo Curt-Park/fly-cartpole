@@ -29,9 +29,10 @@ RPE_SPACE = {
     "rpe_trace_decay": (0.5, 0.8, 0.95),
 }
 BILATERAL_SPACE = {
-    "bilateral_learning_rate": (0.005, 0.01, 0.02),
+    "bilateral_learning_rate": (0.03, 0.05, 0.1),
+    "bilateral_outcome_scale": (0.1, 0.2, 0.3),
     "bilateral_trace_decay": (0.8, 0.9),
-    "bilateral_beta": (100.0, 300.0),
+    "bilateral_beta": (100.0,),
 }
 TD_SPACE = {
     "td_actor_lr": (0.01, 0.05, 0.2),

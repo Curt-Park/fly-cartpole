@@ -173,7 +173,7 @@ function advance() {
     const pLeft = probabilityLeft(model, evaluation.values);
     upcoming = pLeft * evaluation.values[0] + (1 - pLeft) * evaluation.values[1];
   }
-  const error = reward - punish + model.gamma * upcoming - current.values[action];
+  const error = model.outcome_scale * (reward - punish) + model.gamma * upcoming - current.values[action];
   latest = { action, error, evaluation: current };
   rewardGlow = Math.max(rewardGlow * 0.85, Math.min(1, Math.max(error, 0) * 10));
   punishGlow = Math.max(punishGlow * 0.92, Math.min(1, Math.max(-error, 0) * 3));

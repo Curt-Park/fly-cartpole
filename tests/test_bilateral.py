@@ -82,3 +82,13 @@ def test_push_pull_depresses_where_dopamine_lands_and_restores_where_its_opponen
 def test_push_pull_starts_from_the_initial_gain(circuit_path):
     fly = make(circuit_path, bilateral_plasticity="push-pull", bilateral_initial_gain=0.5)
     assert all((gain == 0.5).all() for gain in fly.gains)
+
+
+def test_outcome_scale_shrinks_what_a_fall_teaches(circuit_path):
+    full, scaled = make(circuit_path), make(circuit_path, bilateral_outcome_scale=0.2)
+    for fly in (full, scaled):
+        fly.act(STATE)
+        predicted = fly.values(STATE)[fly.last_decision.action]
+        fly.learn(punish=1.0, reward=0.0, next_state=STATE, terminated=True)
+    assert full.released == pytest.approx((1.0 + predicted, 0.0))
+    assert scaled.released == pytest.approx((0.2 + predicted, 0.0))

@@ -32,6 +32,7 @@ class Hyperparameters:
     bilateral_centre: bool = False
     bilateral_plasticity: str = "push-pull"
     bilateral_initial_gain: float = 0.5
+    bilateral_outcome_scale: float = 1.0
     td_actor_lr: float = 0.01
     td_critic_lr: float = 0.05
     td_trace_decay: float = 0.9

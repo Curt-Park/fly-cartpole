@@ -22,4 +22,4 @@ class RandomAgent:
         return Decision(action, (0.0, 0.0), self.encoder.glomeruli(state, action), np.zeros(self.n_kc), np.zeros(0))
 
     def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
-        pass
+        self.released = (punish, reward)

@@ -38,19 +38,63 @@ class FlyAgent:
         mbon = self.body.mbon(kc, self.gain)
         return glomeruli, kc, mbon, float(mbon @ self.body.mbon_valence)
 
+    def choice_probability(self, score_left: float, score_right: float) -> float:
+        # tanh form of the logistic avoids overflow at large beta.
+        return 0.5 * (1.0 + np.tanh(0.5 * self.params.beta * (score_left - score_right)))
+
     def act(self, state: np.ndarray) -> Decision:
         options = [self.option(state, action) for action in (LEFT, RIGHT)]
         score_left, score_right = options[LEFT][3], options[RIGHT][3]
-        # tanh form of the logistic avoids overflow at large beta.
-        p_left = 0.5 * (1.0 + np.tanh(0.5 * self.params.beta * (score_left - score_right)))
-        action = LEFT if self.rng.random() < p_left else RIGHT
+        action = LEFT if self.rng.random() < self.choice_probability(score_left, score_right) else RIGHT
         glomeruli, kc, mbon, _ = options[action]
         self.trace = self.params.trace_decay * self.trace + kc
-        return Decision(action, (score_left, score_right), glomeruli, kc, mbon)
+        self.last_decision = Decision(action, (score_left, score_right), glomeruli, kc, mbon)
+        return self.last_decision
 
     def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
-        dopamine = self.body.dopamine_at_mbon(punish, reward)
+        self.released = (punish, reward)
+        self.depress(self.body.dopamine_at_mbon(punish, reward))
+
+    def depress(self, dopamine: np.ndarray) -> None:
         if self.params.learning_rate and dopamine.any():
             self.gain -= self.params.learning_rate * np.outer(self.trace, dopamine)
         self.gain += self.params.gain_decay * (1.0 - self.gain)
         np.clip(self.gain, 0.0, 1.0, out=self.gain)
+
+
+class PredictionErrorFly(FlyAgent):
+    """Dopamine as a reward prediction error read from the fly's own MBON valence (Bennett et al. 2021)."""
+
+    def expected_score(self, state: np.ndarray) -> float:
+        left, right = self.option(state, LEFT)[3], self.option(state, RIGHT)[3]
+        p_left = self.choice_probability(left, right)
+        return p_left * left + (1.0 - p_left) * right
+
+    def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
+        predicted = self.last_decision.scores[self.last_decision.action]
+        upcoming = 0.0 if terminated else self.expected_score(next_state)
+        error = reward - punish + self.params.gamma * upcoming - predicted
+        self.released = (max(-error, 0.0), max(error, 0.0))
+        self.depress(self.body.dopamine_at_mbon(*self.released))
+
+
+class WiredPredictionErrorFly(FlyAgent):
+    """Each dopamine neuron predicts from the MBONs that synapse onto it in the connectome."""
+
+    def dan_predictions(self, mbon: np.ndarray) -> np.ndarray:
+        # Synapse signs are unknown; MBON valence stands in for them.
+        return (self.body.mbon_valence * mbon) @ self.body.mbon_dan
+
+    def expected_predictions(self, state: np.ndarray) -> np.ndarray:
+        left, right = self.option(state, LEFT), self.option(state, RIGHT)
+        p_left = self.choice_probability(left[3], right[3])
+        return p_left * self.dan_predictions(left[2]) + (1.0 - p_left) * self.dan_predictions(right[2])
+
+    def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
+        predicted = self.dan_predictions(self.last_decision.mbon)
+        upcoming = 0.0 if terminated else self.expected_predictions(next_state)
+        errors = reward - punish + self.params.gamma * upcoming - predicted
+        punishing = self.body.dan_is_punishment
+        self.dan_activity = np.where(punishing, np.maximum(-errors, 0.0), np.maximum(errors, 0.0))
+        self.released = (float(self.dan_activity[punishing].mean()), float(self.dan_activity[~punishing].mean()))
+        self.depress(self.body.dopamine_from(self.dan_activity))

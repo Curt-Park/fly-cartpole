@@ -49,6 +49,7 @@ class TDAgent:
         return Decision(action, (float(preferences[0]), float(preferences[1])), glomeruli, kc, np.zeros(0))
 
     def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
+        self.released = (punish, reward)
         kc, probabilities, action = self.last
         params = self.params
         next_value = 0.0 if terminated else self.state_value(next_state)

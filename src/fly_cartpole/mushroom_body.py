@@ -22,6 +22,7 @@ class MushroomBody:
         self.pn_kc = normalise_columns(circuit.pn_kc)
         self.kc_mbon = normalise_columns(circuit.kc_mbon)
         self.dan_mbon = normalise_columns(circuit.dan_mbon)
+        self.mbon_dan = normalise_columns(circuit.mbon_dan)
         self.mbon_valence = circuit.mbon_valence.astype(np.float64)
         self.dan_is_punishment = circuit.dan_is_punishment
         self.n_kc, self.n_mbon = circuit.n_kc, circuit.n_mbon
@@ -34,5 +35,8 @@ class MushroomBody:
         return kc @ (self.kc_mbon * gain)
 
     def dopamine_at_mbon(self, punish: float, reward: float) -> np.ndarray:
+        return self.dopamine_from(np.where(self.dan_is_punishment, punish, reward))
+
+    def dopamine_from(self, dan_activity: np.ndarray) -> np.ndarray:
         # Anatomy, not a parameter, decides which compartments a signal can change.
-        return np.where(self.dan_is_punishment, punish, reward) @ self.dan_mbon
+        return dan_activity @ self.dan_mbon

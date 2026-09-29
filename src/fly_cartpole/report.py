@@ -12,13 +12,16 @@ from .run import CONDITIONS, run_many, save_lengths
 
 FINAL_WINDOW = 100
 # Validated categorical order (light surface); summary.md is the table view for the low-contrast slots.
-COLOURS = {"fly": "#2a78d6", "fly-best": "#eb6834", "fly-shuffled": "#1baf7a", "fly-frozen": "#eda100", "td": "#e87ba4"}
+COLOURS = {"fly": "#2a78d6", "fly-best": "#eb6834", "fly-shuffled": "#1baf7a", "fly-frozen": "#eda100",
+           "td": "#e87ba4", "fly-rpe": "#008300", "fly-rpe-wired": "#4a3aa7"}
 # The random policy is a chance reference, drawn in neutral ink rather than as a sixth series.
 REFERENCE_COLOUR = "#898781"
 CLAIMS = (
     ("learning", "fly", "fly-frozen", "greater"),
     ("wiring contributes", "fly", "fly-shuffled", "greater"),
     ("baseline mode", "fly", "fly-best", "two-sided"),
+    ("prediction error helps", "fly-rpe", "fly", "greater"),
+    ("measured feedback wiring works", "fly-rpe-wired", "fly", "greater"),
 )
 
 

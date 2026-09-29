@@ -23,6 +23,8 @@ class Hyperparameters:
     action_fraction: float = 0.25
     tuning_width: float = 1.0
     baseline_window: int = 20
+    rpe_learning_rate: float = 0.1
+    rpe_trace_decay: float = 0.9
     td_actor_lr: float = 0.01
     td_critic_lr: float = 0.05
     td_trace_decay: float = 0.9

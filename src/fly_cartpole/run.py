@@ -14,14 +14,15 @@ import numpy as np
 from .circuit import Circuit, load_circuit, shuffle_circuit
 from .dopamine import DopamineSchedule
 from .encoder import build_encoder
-from .fly_agent import Decision, FlyAgent
+from .fly_agent import Decision, FlyAgent, PredictionErrorFly, WiredPredictionErrorFly
 from .mushroom_body import MushroomBody
 from .params import Hyperparameters
 from .paths import CIRCUIT_PATH, RESULTS_DIR
 from .random_agent import RandomAgent
 from .td_agent import TDAgent
 
-CONDITIONS = ("fly", "fly-best", "fly-shuffled", "fly-frozen", "td", "random")
+CONDITIONS = ("fly", "fly-best", "fly-shuffled", "fly-frozen", "fly-rpe", "fly-rpe-wired", "td", "random")
+PREDICTION_ERROR_AGENTS = {"fly-rpe": PredictionErrorFly, "fly-rpe-wired": WiredPredictionErrorFly}
 StepCallback = Callable[[int, int, np.ndarray, Decision, float, float, "float | None"], None]
 
 
@@ -33,13 +34,15 @@ def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: 
         circuit = shuffle_circuit(circuit, rng)
     if condition == "fly-frozen":
         params = replace(params, learning_rate=0.0)
+    if condition in PREDICTION_ERROR_AGENTS:
+        params = replace(params, learning_rate=params.rpe_learning_rate, trace_decay=params.rpe_trace_decay)
     body = MushroomBody(circuit, params.kc_sparsity)
     # Same seed, same glomerulus assignment: conditions are paired per seed.
     encoder = build_encoder(circuit.pn_glomerulus, params.action_fraction, params.tuning_width, seed)
     schedule = DopamineSchedule("best" if condition == "fly-best" else "mean", params.baseline_window, params.reward_per_step)
     if condition == "random":
         return RandomAgent(encoder, body.n_kc, rng), schedule
-    agent_class = TDAgent if condition == "td" else FlyAgent
+    agent_class = PREDICTION_ERROR_AGENTS.get(condition, TDAgent if condition == "td" else FlyAgent)
     return agent_class(body, encoder, params, rng), schedule
 
 
@@ -59,7 +62,7 @@ def run_episodes(agent, schedule: DopamineSchedule, episodes: int, seed: int, on
             punish, reward = schedule.signal(step, terminated)
             agent.learn(punish, reward, next_state, terminated)
             if on_step is not None:
-                on_step(episode, step, state, decision, punish, reward, schedule.baseline)
+                on_step(episode, step, state, decision, *agent.released, schedule.baseline)
             state = next_state
             if terminated or truncated:
                 break

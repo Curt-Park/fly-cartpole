@@ -15,7 +15,8 @@ from .params import HYPERPARAMETERS_FILE, Hyperparameters, save_hyperparameters
 from .paths import CIRCUIT_PATH, LEFT_CIRCUIT_PATH, RESULTS_DIR
 from .run import make_agent, run_many
 
-TUNING_SEEDS = (100, 101, 102, 103, 104)
+# Forty seeds: five missed a failure that one bilateral fly in five hits.
+TUNING_SEEDS = tuple(range(100, 140))
 FLY_SPACE = {
     "trace_decay": (0.3, 0.6, 0.8, 0.95),
     "learning_rate": (0.02, 0.1, 0.5),
@@ -29,9 +30,9 @@ RPE_SPACE = {
     "rpe_trace_decay": (0.5, 0.8, 0.95),
 }
 BILATERAL_SPACE = {
-    "bilateral_learning_rate": (0.03, 0.05, 0.1),
-    "bilateral_outcome_scale": (0.1, 0.2, 0.3),
-    "bilateral_trace_decay": (0.8, 0.9),
+    "bilateral_learning_rate": (0.01, 0.03),
+    "bilateral_outcome_scale": (0.1, 0.3, 1.0),
+    "bilateral_trace_decay": (0.8,),
     "bilateral_beta": (100.0,),
 }
 TD_SPACE = {

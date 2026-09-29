@@ -11,7 +11,7 @@ import numpy as np
 
 from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, RESULTS_DIR, WEB_DATA_DIR
 
-EVALUATION_SEEDS = "0-9"
+EVALUATION_SEEDS = "10-29"
 
 
 def parse_seeds(text: str) -> list[int]:
@@ -39,7 +39,7 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--cache", type=Path, default=CACHE_DIR)
     extract.add_argument("--data", type=Path, default=DATA_DIR)
 
-    tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-104")
+    tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-139")
     tune.add_argument("--configs", type=int, default=40)
     tune.add_argument("--bilateral-episodes", type=int, default=1000)
     add_run_options(tune, episodes=300)

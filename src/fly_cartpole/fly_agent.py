@@ -61,14 +61,24 @@ class FlyAgent:
 
 def depress(gain: np.ndarray, trace: np.ndarray, dopamine: np.ndarray, learning_rate: float, decay: float) -> None:
     """Dopamine-gated depression of traced KC->MBON synapses, then recovery toward 1, in place."""
-    rows = np.flatnonzero(trace) if learning_rate and dopamine.any() else np.zeros(0, dtype=np.int64)
+    update_gains(gain, trace, dopamine, None, learning_rate, decay)
+
+
+def update_gains(gain: np.ndarray, trace: np.ndarray, depress_at: np.ndarray, restore_at: np.ndarray | None,
+                 learning_rate: float, decay: float) -> None:
+    """Traced synapses weaken where dopamine lands and, if given, strengthen where its opponent lands; in place."""
+    signalled = depress_at.any() or (restore_at is not None and restore_at.any())
+    rows = np.flatnonzero(trace) if learning_rate and signalled else np.zeros(0, dtype=np.int64)
     if rows.size:
-        gain[rows] -= learning_rate * np.outer(trace[rows], dopamine)
+        change = -np.outer(trace[rows], depress_at)
+        if restore_at is not None:
+            change += np.outer(trace[rows], restore_at)
+        gain[rows] += learning_rate * change
     if decay:
         gain += decay * (1.0 - gain)
-    # Depression only lowers gains, so only the touched rows can cross the floor.
+    # Only the touched rows can leave [0, 1]; recovery toward 1 cannot.
     if rows.size:
-        gain[rows] = np.maximum(gain[rows], 0.0)
+        gain[rows] = np.clip(gain[rows], 0.0, 1.0)
 
 
 class PredictionErrorFly(FlyAgent):

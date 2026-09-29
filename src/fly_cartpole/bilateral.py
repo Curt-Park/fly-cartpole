@@ -6,7 +6,7 @@ import numpy as np
 
 from .circuit import Circuit
 from .encoder import LEFT, RIGHT, STATE_LIMITS, Encoder, build_encoder
-from .fly_agent import Decision, depress
+from .fly_agent import Decision, update_gains
 from .mushroom_body import MushroomBody
 from .params import Hyperparameters
 
@@ -24,7 +24,7 @@ class BilateralFly:
         self.pn_groups = pn_groups
         self.params = params
         self.rng = rng
-        self.gains = [np.ones((body.n_kc, body.n_mbon)) for body in bodies]
+        self.gains = [np.full((body.n_kc, body.n_mbon), params.bilateral_initial_gain) for body in bodies]
         self.offsets = np.zeros(len(SIDES))
         # Homeostatic set point: each hemisphere's innate average value over typical states is taken as zero.
         self.calibration_states = np.random.default_rng(0).uniform(-0.5, 0.5, size=(CALIBRATION_STATES, len(STATE_LIMITS))) * STATE_LIMITS
@@ -73,9 +73,13 @@ class BilateralFly:
             upcoming = p_left * next_values[LEFT] + (1.0 - p_left) * next_values[RIGHT]
         error = reward - punish + self.params.gamma * upcoming - predicted
         self.released = (max(-error, 0.0), max(error, 0.0))
+        worse, better = self.released
+        push_pull = self.params.bilateral_plasticity == "push-pull"
         for side, body in zip(SIDES, self.bodies):
-            depress(self.gains[side], self.traces[side], body.dopamine_at_mbon(*self.released),
-                    self.params.bilateral_learning_rate, self.params.bilateral_gain_decay)
+            # Push-pull: where the opposing dopamine population lands, the same traced synapses recover instead.
+            restore_at = body.dopamine_at_mbon(better, worse) if push_pull else None
+            update_gains(self.gains[side], self.traces[side], body.dopamine_at_mbon(worse, better), restore_at,
+                         self.params.bilateral_learning_rate, self.params.bilateral_gain_decay)
 
 
 def build_bilateral(left: Circuit, right: Circuit, params: Hyperparameters, seed: int) -> BilateralFly:

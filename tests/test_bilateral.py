@@ -63,3 +63,22 @@ def test_centred_hemispheres_start_with_no_average_preference(circuit_path):
 def test_uncentred_hemispheres_keep_their_innate_offset(circuit_path):
     fly = make(circuit_path, bilateral_centre=False)
     assert not fly.offsets.any()
+
+
+def test_push_pull_depresses_where_dopamine_lands_and_restores_where_its_opponent_lands(circuit_path):
+    fly = make(circuit_path, bilateral_plasticity="push-pull", bilateral_initial_gain=0.5, bilateral_learning_rate=0.5,
+               bilateral_centre=False)
+    decision = fly.act(STATE)
+    traced = np.flatnonzero(fly.traces[decision.action])
+    fly.learn(punish=1.0, reward=0.0, next_state=STATE, terminated=True)
+    gain = fly.gains[decision.action][traced]
+    # Synthetic wiring: punishment (PPL1) lands on MBON 2 and 3, its opponent (PAM) on MBON 0, 1 and 2.
+    assert (gain[:, 3] < 0.5).all()
+    assert (gain[:, 0] > 0.5).all() and (gain[:, 1] > 0.5).all()
+    assert (gain[:, 2] < 0.5).all()
+    assert ((0.0 <= fly.gains[decision.action]) & (fly.gains[decision.action] <= 1.0)).all()
+
+
+def test_push_pull_starts_from_the_initial_gain(circuit_path):
+    fly = make(circuit_path, bilateral_plasticity="push-pull", bilateral_initial_gain=0.5)
+    assert all((gain == 0.5).all() for gain in fly.gains)

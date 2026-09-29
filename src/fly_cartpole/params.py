@@ -29,7 +29,9 @@ class Hyperparameters:
     bilateral_trace_decay: float = 0.5
     bilateral_beta: float = 30.0
     bilateral_gain_decay: float = 0.0
-    bilateral_centre: bool = True
+    bilateral_centre: bool = False
+    bilateral_plasticity: str = "push-pull"
+    bilateral_initial_gain: float = 0.5
     td_actor_lr: float = 0.01
     td_critic_lr: float = 0.05
     td_trace_decay: float = 0.9

@@ -45,3 +45,8 @@ def test_projection_neurons_copy_their_glomerulus():
 def test_too_few_glomeruli_is_rejected():
     with pytest.raises(ValueError):
         build_encoder(np.array(["A", "B", "C", "D"]), 0.25, 1.0, seed=0)
+
+
+def test_zero_action_fraction_leaves_every_glomerulus_to_the_state():
+    roles = build_encoder(GLOMERULI, action_fraction=0.0, tuning_width=1.0, seed=0).group_role
+    assert (roles < ROLE_PUSH_LEFT).all()

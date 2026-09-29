@@ -11,25 +11,37 @@ from pathlib import Path
 import gymnasium as gym
 import numpy as np
 
+from .bilateral import BilateralFly, build_bilateral
 from .circuit import Circuit, load_circuit, shuffle_circuit
 from .dopamine import DopamineSchedule
 from .encoder import build_encoder
 from .fly_agent import Decision, FlyAgent, PredictionErrorFly, WiredPredictionErrorFly
 from .mushroom_body import MushroomBody
 from .params import Hyperparameters
-from .paths import CIRCUIT_PATH, RESULTS_DIR
+from .paths import CIRCUIT_PATH, LEFT_CIRCUIT_PATH, RESULTS_DIR
 from .random_agent import RandomAgent
 from .td_agent import TDAgent
 
-CONDITIONS = ("fly", "fly-best", "fly-shuffled", "fly-frozen", "fly-rpe", "fly-rpe-wired", "td", "random")
+CONDITIONS = ("fly", "fly-best", "fly-shuffled", "fly-frozen", "fly-rpe", "fly-rpe-wired",
+              "fly-bilateral", "fly-bilateral-shuffled", "fly-bilateral-frozen", "td", "random")
+BILATERAL = ("fly-bilateral", "fly-bilateral-shuffled", "fly-bilateral-frozen")
 PREDICTION_ERROR_AGENTS = {"fly-rpe": PredictionErrorFly, "fly-rpe-wired": WiredPredictionErrorFly}
 StepCallback = Callable[[int, int, np.ndarray, Decision, float, float, "float | None"], None]
 
 
-def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: int) -> tuple[FlyAgent | TDAgent | RandomAgent, DopamineSchedule]:
+def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: int,
+               left_circuit: Circuit | None = None) -> tuple[FlyAgent | TDAgent | RandomAgent | BilateralFly, DopamineSchedule]:
     if condition not in CONDITIONS:
         raise ValueError(f"condition must be one of {CONDITIONS}, got {condition!r}")
     rng = np.random.default_rng(seed)
+    if condition in BILATERAL:
+        left_circuit = left_circuit if left_circuit is not None else load_circuit(LEFT_CIRCUIT_PATH)
+        if condition == "fly-bilateral-shuffled":
+            circuit, left_circuit = shuffle_circuit(circuit, rng), shuffle_circuit(left_circuit, rng)
+        if condition == "fly-bilateral-frozen":
+            params = replace(params, bilateral_learning_rate=0.0)
+        schedule = DopamineSchedule("mean", params.baseline_window, params.reward_per_step)
+        return build_bilateral(left_circuit, circuit, params, seed), schedule
     if condition == "fly-shuffled":
         circuit = shuffle_circuit(circuit, rng)
     if condition == "fly-frozen":
@@ -72,16 +84,20 @@ def run_episodes(agent, schedule: DopamineSchedule, episodes: int, seed: int, on
     return lengths
 
 
-def run_condition(condition: str, seed: int, episodes: int, params: Hyperparameters, circuit_path: Path = CIRCUIT_PATH) -> list[int]:
-    agent, schedule = make_agent(condition, load_circuit(circuit_path), params, seed)
+def run_condition(condition: str, seed: int, episodes: int, params: Hyperparameters, circuit_path: Path = CIRCUIT_PATH,
+                  left_circuit_path: Path = LEFT_CIRCUIT_PATH) -> list[int]:
+    left_circuit = load_circuit(left_circuit_path) if condition in BILATERAL else None
+    agent, schedule = make_agent(condition, load_circuit(circuit_path), params, seed, left_circuit)
     return run_episodes(agent, schedule, episodes, seed)
 
 
-def run_many(jobs: list[tuple[str, int, Hyperparameters]], episodes: int, workers: int, circuit_path: Path = CIRCUIT_PATH) -> list[list[int]]:
+def run_many(jobs: list[tuple[str, int, Hyperparameters]], episodes: int, workers: int, circuit_path: Path = CIRCUIT_PATH,
+             left_circuit_path: Path = LEFT_CIRCUIT_PATH) -> list[list[int]]:
     if workers <= 1:
-        return [run_condition(condition, seed, episodes, params, circuit_path) for condition, seed, params in jobs]
+        return [run_condition(condition, seed, episodes, params, circuit_path, left_circuit_path) for condition, seed, params in jobs]
     with ProcessPoolExecutor(max_workers=workers) as pool:
-        futures = [pool.submit(run_condition, condition, seed, episodes, params, circuit_path) for condition, seed, params in jobs]
+        futures = [pool.submit(run_condition, condition, seed, episodes, params, circuit_path, left_circuit_path)
+                   for condition, seed, params in jobs]
         return [future.result() for future in futures]
 
 

@@ -25,6 +25,10 @@ class Hyperparameters:
     baseline_window: int = 20
     rpe_learning_rate: float = 0.1
     rpe_trace_decay: float = 0.9
+    bilateral_learning_rate: float = 0.1
+    bilateral_trace_decay: float = 0.5
+    bilateral_beta: float = 30.0
+    bilateral_gain_decay: float = 0.0
     td_actor_lr: float = 0.01
     td_critic_lr: float = 0.05
     td_trace_decay: float = 0.9

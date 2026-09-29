@@ -10,7 +10,8 @@ PARAMS = Hyperparameters(kc_sparsity=0.1)
 
 @pytest.mark.parametrize("condition", CONDITIONS)
 def test_each_condition_runs_end_to_end(circuit_path, condition):
-    lengths = run_condition(condition, seed=0, episodes=5, params=PARAMS, circuit_path=circuit_path)
+    lengths = run_condition(condition, seed=0, episodes=5, params=PARAMS, circuit_path=circuit_path,
+                            left_circuit_path=circuit_path)
     assert len(lengths) == 5
     assert all(1 <= length <= 500 for length in lengths)
 

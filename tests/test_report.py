@@ -23,8 +23,8 @@ def test_permutation_test_is_calm_for_identical_groups():
 
 def test_compare_writes_curves_summary_and_per_seed_results(circuit_path, tmp_path):
     summary = compare(seeds=[0, 1], episodes=3, params=Hyperparameters(kc_sparsity=0.1), workers=1,
-                      circuit_path=circuit_path, results_dir=tmp_path)
+                      circuit_path=circuit_path, results_dir=tmp_path, left_circuit_path=circuit_path)
     assert (tmp_path / "learning_curves.png").stat().st_size > 0
     assert (tmp_path / "summary.md").read_text() == summary
     assert (tmp_path / "td" / "seed_1.json").exists()
-    assert "fly-frozen" in summary and "wiring contributes" in summary
+    assert "fly-frozen" in summary and "bilateral wiring contributes" in summary

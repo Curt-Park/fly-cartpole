@@ -40,7 +40,7 @@ class Encoder:
 def build_encoder(pn_glomerulus: np.ndarray, action_fraction: float, tuning_width: float, seed: int) -> Encoder:
     names, pn_group = np.unique(pn_glomerulus, return_inverse=True)
     n_groups = len(names)
-    per_action = max(1, round(action_fraction * n_groups / 2))
+    per_action = max(1, round(action_fraction * n_groups / 2)) if action_fraction > 0 else 0
     if n_groups - 2 * per_action < len(STATE_LIMITS):
         raise ValueError(f"{n_groups} glomeruli cannot cover two actions and {len(STATE_LIMITS)} state variables")
     order = np.random.default_rng(seed).permutation(n_groups)

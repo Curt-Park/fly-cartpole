@@ -11,7 +11,9 @@ import numpy as np
 
 from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, RESULTS_DIR, WEB_DATA_DIR
 
-EVALUATION_SEEDS = "30-49"
+EVALUATION_SEEDS = "50-69"
+# Tuning seeds kept improving up to about 1,250 episodes and held steady to 2,000.
+TRAINING_EPISODES = 2000
 
 
 def parse_seeds(text: str) -> list[int]:
@@ -47,16 +49,16 @@ def build_parser() -> argparse.ArgumentParser:
     train = commands.add_parser("train", help="run one condition")
     train.add_argument("--condition", choices=CONDITIONS, required=True)
     train.add_argument("--seeds", default=EVALUATION_SEEDS)
-    add_run_options(train, episodes=1000)
+    add_run_options(train, episodes=TRAINING_EPISODES)
 
     compare = commands.add_parser("compare", help="every condition on evaluation seeds, plot and summary")
     compare.add_argument("--seeds", default=EVALUATION_SEEDS)
-    add_run_options(compare, episodes=1000)
+    add_run_options(compare, episodes=TRAINING_EPISODES)
 
     export = commands.add_parser("export", help="train the bilateral fly and export it for the live web viewer")
     export.add_argument("--seed", type=int, default=0)
     export.add_argument("--web-data", type=Path, default=WEB_DATA_DIR)
-    add_run_options(export, episodes=1000)
+    add_run_options(export, episodes=TRAINING_EPISODES)
     return parser
 
 

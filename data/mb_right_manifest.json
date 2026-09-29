@@ -16,12 +16,14 @@
   "edges": {
     "pn_kc": 11062,
     "kc_mbon": 22534,
-    "dan_mbon": 1585
+    "dan_mbon": 1585,
+    "mbon_dan": 1251
   },
   "synapses": {
     "pn_kc": 195129,
     "kc_mbon": 159085,
-    "dan_mbon": 20388
+    "dan_mbon": 20388,
+    "mbon_dan": 5423
   },
   "pn_per_kc": {
     "mean": 5.79,

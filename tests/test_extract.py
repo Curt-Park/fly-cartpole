@@ -32,6 +32,7 @@ def edges_table() -> pd.DataFrame:
         (10, 20, 7), (11, 21, 6),  # KC -> MBON; KC 12 never reaches an MBON
         (30, 20, 9), (31, 21, 8), (31, 20, 2),  # DAN -> MBON; PAM 32 reaches none
         (4, 10, 50),  # left-side PN, not selected
+        (21, 31, 3), (20, 30, 1),  # MBON -> DAN feedback
     ]
     return pd.DataFrame(rows, columns=["body_pre", "body_post", "weight"])
 
@@ -87,3 +88,9 @@ def test_committed_circuit_matches_malecns_counts():
     assert set(circuit.mbon_valence.tolist()) <= {-1, 0, 1}
     assert (circuit.pn_kc.sum(axis=0) > 0).all()
     assert (circuit.kc_mbon.sum(axis=1) > 0).all()
+
+
+def test_build_keeps_mbon_to_dopamine_feedback():
+    arrays, manifest = build_circuit_arrays(annotations_table(), edges_table())
+    assert arrays["mbon_dan"].tolist() == [[1, 0], [0, 3], [0, 0]]
+    assert manifest["edges"]["mbon_dan"] == 2

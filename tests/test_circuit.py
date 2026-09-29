@@ -9,6 +9,7 @@ def test_load_circuit_reads_every_block(circuit_path):
     assert circuit.pn_glomerulus[0] == "G0"
     assert circuit.dan_is_punishment.tolist() == [False, False, True, True]
     assert circuit.mbon_valence.tolist() == [-1, -1, 1, 1, 0, 0]
+    assert circuit.mbon_dan.shape == (6, 4)
 
 
 def test_normalise_columns_sums_to_one_and_leaves_empty_columns_empty():

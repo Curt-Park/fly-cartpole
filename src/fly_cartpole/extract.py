@@ -20,7 +20,7 @@ ANNOTATIONS_FILE = "body-annotations-male-cns-v1.0-minconf-0.5.feather"
 WEIGHTS_FILE = "connectome-weights-male-cns-v1.0-minconf-0.5.feather"
 SOURCE = "MaleCNS v1.0 (HHMI Janelia, Google Research and collaborators), CC BY 4.0"
 POPULATIONS = ("pn", "kc", "mbon", "dan")
-BLOCKS = ("pn_kc", "kc_mbon", "dan_mbon")
+BLOCKS = ("pn_kc", "kc_mbon", "dan_mbon", "mbon_dan")
 
 
 def download_file(url: str, target: Path) -> Path:
@@ -108,6 +108,7 @@ def build_circuit_arrays(annotations: pd.DataFrame, edges: pd.DataFrame) -> tupl
     dan_mbon = connection_block(edges, dan, mbon)
     reaches_mbon = dan_mbon.sum(axis=1) > 0
     dan, dan_mbon, dan_is_punishment = dan[reaches_mbon], dan_mbon[reaches_mbon], dan_is_punishment[reaches_mbon]
+    mbon_dan = connection_block(edges, mbon, dan)
 
     # Punishment dopamine lands on approach compartments, reward dopamine on avoidance ones.
     punishment_input = dan_mbon[dan_is_punishment].sum(axis=0)
@@ -121,6 +122,7 @@ def build_circuit_arrays(annotations: pd.DataFrame, edges: pd.DataFrame) -> tupl
         "pn_kc": pn_kc,
         "kc_mbon": kc_mbon,
         "dan_mbon": dan_mbon,
+        "mbon_dan": mbon_dan,
         "pn_glomerulus": pn_glomerulus,
         "mbon_valence": mbon_valence,
         "dan_is_punishment": dan_is_punishment.astype(np.int8),

@@ -17,7 +17,13 @@ def synthetic_arrays(seed: int = 0) -> dict[str, np.ndarray]:
         [[5, 0, 1, 0, 0, 0], [0, 4, 0, 0, 0, 0], [0, 0, 6, 3, 0, 0], [0, 0, 0, 3, 0, 0]],
         dtype=np.int32,
     )
+    # MBON 4 feeds nothing back; DAN 3 (PPL1) hears no MBON.
+    mbon_dan = np.array(
+        [[2, 0, 1, 0], [0, 3, 0, 0], [1, 0, 2, 0], [0, 1, 1, 0], [0, 0, 0, 0], [1, 1, 0, 0]],
+        dtype=np.int32,
+    )
     arrays = {
+        "mbon_dan": mbon_dan,
         "pn_kc": pn_kc,
         "kc_mbon": kc_mbon,
         "dan_mbon": dan_mbon,

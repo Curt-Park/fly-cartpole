@@ -15,6 +15,7 @@ class Circuit:
     pn_kc: np.ndarray
     kc_mbon: np.ndarray
     dan_mbon: np.ndarray
+    mbon_dan: np.ndarray
     pn_glomerulus: np.ndarray
     mbon_valence: np.ndarray
     dan_is_punishment: np.ndarray
@@ -42,6 +43,7 @@ def load_circuit(path: Path = CIRCUIT_PATH) -> Circuit:
             pn_kc=arrays["pn_kc"].astype(np.float64),
             kc_mbon=arrays["kc_mbon"].astype(np.float64),
             dan_mbon=arrays["dan_mbon"].astype(np.float64),
+            mbon_dan=arrays["mbon_dan"].astype(np.float64),
             pn_glomerulus=arrays["pn_glomerulus"].astype(str),
             mbon_valence=arrays["mbon_valence"].astype(np.int8),
             dan_is_punishment=arrays["dan_is_punishment"].astype(bool),

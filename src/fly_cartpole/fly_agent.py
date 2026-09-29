@@ -56,10 +56,19 @@ class FlyAgent:
         self.depress(self.body.dopamine_at_mbon(punish, reward))
 
     def depress(self, dopamine: np.ndarray) -> None:
-        if self.params.learning_rate and dopamine.any():
-            self.gain -= self.params.learning_rate * np.outer(self.trace, dopamine)
-        self.gain += self.params.gain_decay * (1.0 - self.gain)
-        np.clip(self.gain, 0.0, 1.0, out=self.gain)
+        depress(self.gain, self.trace, dopamine, self.params.learning_rate, self.params.gain_decay)
+
+
+def depress(gain: np.ndarray, trace: np.ndarray, dopamine: np.ndarray, learning_rate: float, decay: float) -> None:
+    """Dopamine-gated depression of traced KC->MBON synapses, then recovery toward 1, in place."""
+    rows = np.flatnonzero(trace) if learning_rate and dopamine.any() else np.zeros(0, dtype=np.int64)
+    if rows.size:
+        gain[rows] -= learning_rate * np.outer(trace[rows], dopamine)
+    if decay:
+        gain += decay * (1.0 - gain)
+    # Depression only lowers gains, so only the touched rows can cross the floor.
+    if rows.size:
+        gain[rows] = np.maximum(gain[rows], 0.0)
 
 
 class PredictionErrorFly(FlyAgent):

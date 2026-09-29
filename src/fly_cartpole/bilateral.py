@@ -6,7 +6,7 @@ import numpy as np
 
 from .circuit import Circuit
 from .encoder import LEFT, RIGHT, Encoder, build_encoder
-from .fly_agent import Decision
+from .fly_agent import Decision, depress
 from .mushroom_body import MushroomBody
 from .params import Hyperparameters
 
@@ -51,6 +51,8 @@ class BilateralFly:
         kc, mbon, _ = hemispheres[action]
         for side in SIDES:
             self.traces[side] *= self.params.bilateral_trace_decay
+            # Traces this faint change no gain measurably; dropping them keeps learning sparse and fast.
+            self.traces[side][self.traces[side] < 1e-10] = 0.0
         self.traces[action] += kc
         self.last_decision = Decision(action, (value_left, value_right), glomeruli, kc, mbon)
         return self.last_decision
@@ -66,11 +68,8 @@ class BilateralFly:
         error = reward - punish + self.params.gamma * upcoming - predicted
         self.released = (max(-error, 0.0), max(error, 0.0))
         for side, body in zip(SIDES, self.bodies):
-            dopamine = body.dopamine_at_mbon(*self.released)
-            if self.params.bilateral_learning_rate and dopamine.any():
-                self.gains[side] -= self.params.bilateral_learning_rate * np.outer(self.traces[side], dopamine)
-            self.gains[side] += self.params.bilateral_gain_decay * (1.0 - self.gains[side])
-            np.clip(self.gains[side], 0.0, 1.0, out=self.gains[side])
+            depress(self.gains[side], self.traces[side], body.dopamine_at_mbon(*self.released),
+                    self.params.bilateral_learning_rate, self.params.bilateral_gain_decay)
 
 
 def build_bilateral(left: Circuit, right: Circuit, params: Hyperparameters, seed: int) -> BilateralFly:

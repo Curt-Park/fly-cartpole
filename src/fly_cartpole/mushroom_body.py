@@ -28,12 +28,17 @@ class MushroomBody:
         self.dan_is_punishment = circuit.dan_is_punishment
         self.n_kc, self.n_mbon = circuit.n_kc, circuit.n_mbon
         self.k = max(1, round(kc_sparsity * circuit.n_kc))
+        # PN->KC is ~3% dense; summing only real edges, PN by PN, is faster and matches the browser's order.
+        self.pn_rows, self.pn_cols = np.nonzero(self.pn_kc)
+        self.pn_values = self.pn_kc[self.pn_rows, self.pn_cols]
 
     def kenyon(self, pn: np.ndarray) -> np.ndarray:
-        return kenyon_code(pn @ self.pn_kc, self.k)
+        drive = np.bincount(self.pn_cols, weights=pn[self.pn_rows] * self.pn_values, minlength=self.n_kc)
+        return kenyon_code(drive, self.k)
 
     def mbon(self, kc: np.ndarray, gain: np.ndarray) -> np.ndarray:
-        return kc @ (self.kc_mbon * gain)
+        active = np.flatnonzero(kc)
+        return kc[active] @ (self.kc_mbon[active] * gain[active])
 
     def dopamine_at_mbon(self, punish: float, reward: float) -> np.ndarray:
         return self.dopamine_from(np.where(self.dan_is_punishment, punish, reward))

@@ -17,12 +17,12 @@ from .run import make_agent, run_many
 
 # Forty seeds: five missed a failure that one bilateral fly in five hits.
 TUNING_SEEDS = tuple(range(100, 140))
+# The reward schedule defines the task every condition faces, so no search may change it.
 FLY_SPACE = {
     "trace_decay": (0.3, 0.6, 0.8, 0.95),
     "learning_rate": (0.02, 0.1, 0.5),
     "beta": (3.0, 10.0, 30.0),
     "gain_decay": (1e-4, 1e-3, 1e-2),
-    "reward_per_step": (0.02, 0.1, 0.5),
     "action_fraction": (0.1, 0.25),
 }
 RPE_SPACE = {

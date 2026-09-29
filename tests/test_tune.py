@@ -34,3 +34,9 @@ def test_tune_writes_hyperparameters_and_the_search_table(circuit_path, tmp_path
     assert len(table["td"]) == 6
     assert best.bilateral_learning_rate == table["fly-bilateral"][0]["config"]["bilateral_learning_rate"]
     assert 0.0 <= table["left_right_kc_overlap"] <= 1.0
+
+
+def test_tuning_never_changes_the_task_reward(circuit_path, tmp_path):
+    best = tune(configs=2, episodes=3, workers=1, circuit_path=circuit_path, results_dir=tmp_path, base=PARAMS,
+                left_circuit_path=circuit_path, bilateral_episodes=3)
+    assert best.reward_per_step == PARAMS.reward_per_step

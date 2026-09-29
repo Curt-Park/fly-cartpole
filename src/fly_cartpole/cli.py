@@ -11,7 +11,7 @@ import numpy as np
 
 from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, RESULTS_DIR, WEB_DATA_DIR
 
-EVALUATION_SEEDS = "10-29"
+EVALUATION_SEEDS = "30-49"
 
 
 def parse_seeds(text: str) -> list[int]:

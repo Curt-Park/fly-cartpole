@@ -19,7 +19,7 @@ class Hyperparameters:
     trace_decay: float = 0.95
     learning_rate: float = 0.5
     gain_decay: float = 0.001
-    reward_per_step: float = 0.05
+    reward_per_step: float = 0.1
     action_fraction: float = 0.25
     tuning_width: float = 1.0
     baseline_window: int = 20

@@ -41,7 +41,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-104")
     tune.add_argument("--configs", type=int, default=40)
-    tune.add_argument("--bilateral-episodes", type=int, default=500)
+    tune.add_argument("--bilateral-episodes", type=int, default=1000)
     add_run_options(tune, episodes=300)
 
     train = commands.add_parser("train", help="run one condition")

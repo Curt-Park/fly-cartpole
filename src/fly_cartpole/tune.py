@@ -30,9 +30,8 @@ RPE_SPACE = {
 }
 BILATERAL_SPACE = {
     "bilateral_learning_rate": (0.005, 0.01, 0.02),
-    "bilateral_trace_decay": (0.3, 0.5),
+    "bilateral_trace_decay": (0.8, 0.9),
     "bilateral_beta": (100.0, 300.0),
-    "bilateral_gain_decay": (1e-5, 1e-4),
 }
 TD_SPACE = {
     "td_actor_lr": (0.01, 0.05, 0.2),
@@ -80,7 +79,7 @@ def full_grid(space: dict[str, tuple]) -> list[dict]:
 
 def tune(configs: int, episodes: int, workers: int, circuit_path: Path = CIRCUIT_PATH, results_dir: Path = RESULTS_DIR,
          base: Hyperparameters = Hyperparameters(), seeds: tuple[int, ...] = TUNING_SEEDS,
-         left_circuit_path: Path = LEFT_CIRCUIT_PATH, bilateral_episodes: int = 500) -> Hyperparameters:
+         left_circuit_path: Path = LEFT_CIRCUIT_PATH, bilateral_episodes: int = 1000) -> Hyperparameters:
     rng = np.random.default_rng(0)
     table: dict = {"episodes": episodes, "bilateral_episodes": bilateral_episodes, "seeds": list(seeds)}
     best = base

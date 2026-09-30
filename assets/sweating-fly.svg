@@ -100,36 +100,16 @@
     <path d="M308 128 l-8 -4 M308 128 l-3 -8 M336 128 l8 -4 M336 128 l3 -8" stroke-width="2"/>
   </g>
 
-  <!-- sweat, a lot of it -->
+  <!-- a few drops of sweat at the temples -->
   <g fill="#6cb4ee" stroke="#3f8fcf" stroke-width="1.5">
-    <use href="#drop" transform="translate(276 146) rotate(-30) scale(1.5)"/>
-    <use href="#drop" transform="translate(372 138) rotate(28) scale(1.5)"/>
-    <use href="#drop" transform="translate(258 186) rotate(-55) scale(1.1)"/>
-    <use href="#drop" transform="translate(384 182) rotate(50) scale(1.1)"/>
-    <use href="#drop" transform="translate(236 118) rotate(-45) scale(1.0)"/>
-    <use href="#drop" transform="translate(410 112) rotate(45) scale(1.0)"/>
-    <use href="#drop" transform="translate(214 150) rotate(-70) scale(0.8)"/>
-    <use href="#drop" transform="translate(432 150) rotate(70) scale(0.8)"/>
-    <use href="#drop" transform="translate(300 128) rotate(-10) scale(0.9)"/>
-    <use href="#drop" transform="translate(348 124) rotate(12) scale(0.9)"/>
-    <use href="#drop" transform="translate(296 204) scale(0.9)"/>
-    <use href="#drop" transform="translate(342 232) scale(0.8)"/>
-    <use href="#drop" transform="translate(252 290) scale(0.9)"/>
-    <use href="#drop" transform="translate(384 292) scale(0.8)"/>
-  </g>
-  <g fill="#6cb4ee" fill-opacity="0.45">
-    <ellipse cx="262" cy="303" rx="16" ry="3"/>
-    <ellipse cx="386" cy="303" rx="12" ry="3"/>
-  </g>
-  <g fill="#ffffff">
-    <ellipse cx="272" cy="141" rx="2.5" ry="4" transform="rotate(-30 272 141)"/>
-    <ellipse cx="368" cy="133" rx="2.5" ry="4" transform="rotate(28 368 133)"/>
-    <ellipse cx="255" cy="182" rx="2" ry="3" transform="rotate(-55 255 182)"/>
-    <ellipse cx="381" cy="178" rx="2" ry="3" transform="rotate(50 381 178)"/>
-  </g>
-  <g stroke="#9fcdf2" stroke-width="2.5" stroke-linecap="round">
-    <line x1="222" y1="106" x2="210" y2="96"/><line x1="224" y1="122" x2="208" y2="120"/>
-    <line x1="200" y1="146" x2="188" y2="140"/><line x1="426" y1="100" x2="438" y2="90"/>
-    <line x1="424" y1="116" x2="440" y2="114"/><line x1="446" y1="146" x2="458" y2="140"/>
+    <g transform="translate(366 150) rotate(22) scale(1.1)">
+      <use href="#drop"/><ellipse cx="-3" cy="0" rx="1.6" ry="2.8" fill="#ffffff" stroke="none"/>
+    </g>
+    <g transform="translate(280 152) rotate(-20)">
+      <use href="#drop"/><ellipse cx="-3" cy="0" rx="1.5" ry="2.6" fill="#ffffff" stroke="none"/>
+    </g>
+    <g transform="translate(380 124) rotate(35) scale(0.7)">
+      <use href="#drop"/>
+    </g>
   </g>
 </svg>

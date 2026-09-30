@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/sweating-fly.svg" alt="수레 위에서 땀을 뻘뻘 흘리며 흔들리는 막대기를 세우고 있는 초파리" width="640">
+  <img src="assets/fly-cartpole.svg" alt="수레 위에서 걱정스러운 얼굴로 흔들리는 막대기를 세우고 있는 초파리" width="640">
 </p>
 
 # fly-cartpole

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/sweating-fly.svg" alt="A fruit fly on a cart, sweating as it holds a wobbling pole upright" width="640">
+  <img src="assets/fly-cartpole.svg" alt="A worried fruit fly on a cart, holding a wobbling pole upright" width="640">
 </p>
 
 # fly-cartpole

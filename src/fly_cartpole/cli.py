@@ -11,9 +11,9 @@ import numpy as np
 
 from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, RESULTS_DIR, WEB_DATA_DIR
 
-EVALUATION_SEEDS = "50-69"
-# Tuning seeds kept improving up to about 1,250 episodes and held steady to 2,000.
-TRAINING_EPISODES = 2000
+EVALUATION_SEEDS = "70-89"
+# Tuning seeds kept improving up to about 3,000 episodes and slipped by 4,000.
+TRAINING_EPISODES = 3000
 
 
 def parse_seeds(text: str) -> list[int]:
@@ -43,7 +43,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-139")
     tune.add_argument("--configs", type=int, default=40)
-    tune.add_argument("--bilateral-episodes", type=int, default=1000)
+    tune.add_argument("--bilateral-episodes", type=int, default=TRAINING_EPISODES)
     add_run_options(tune, episodes=300)
 
     train = commands.add_parser("train", help="run one condition")

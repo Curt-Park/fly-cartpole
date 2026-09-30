@@ -44,5 +44,8 @@ export function evaluate(model, state, trained) {
 }
 
 export function probabilityLeft(model, values) {
-  return 0.5 * (1 + Math.tanh(0.5 * model.beta * (values[0] - values[1])));
+  const committed = 0.5 * (1 + Math.tanh(0.5 * model.beta * (values[0] - values[1])));
+  // Spontaneous choices ignore the values; mirrors BilateralFly.choice_probability.
+  const spontaneous = model.spontaneous ?? 0;
+  return spontaneous / 2 + (1 - spontaneous) * committed;
 }

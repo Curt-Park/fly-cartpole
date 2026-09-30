@@ -35,6 +35,7 @@ class Hyperparameters:
     bilateral_initial_gain: float = 0.5
     bilateral_outcome_scale: float = 1.0
     bilateral_settle_episodes: float = 0.0
+    bilateral_spontaneous: float = 0.0
     td_actor_lr: float = 0.01
     td_critic_lr: float = 0.05
     td_trace_decay: float = 0.9

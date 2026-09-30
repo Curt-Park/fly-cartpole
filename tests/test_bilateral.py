@@ -107,3 +107,9 @@ def test_plasticity_stays_constant_unless_asked_to_settle(circuit_path):
     for _ in range(1000):
         fly.reset_episode()
     assert fly.learning_rate == pytest.approx(0.05)
+
+
+def test_spontaneous_choices_keep_the_losing_side_in_play(circuit_path):
+    fly = make(circuit_path, bilateral_spontaneous=0.02, bilateral_beta=1e6)
+    assert fly.choice_probability(1.0, 0.0) == pytest.approx(0.99)
+    assert fly.choice_probability(0.0, 1.0) == pytest.approx(0.01)

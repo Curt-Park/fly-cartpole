@@ -2,13 +2,15 @@
 import { readFileSync } from "node:fs";
 
 import { step } from "../../web/cartpole.js";
-import { evaluate } from "../../web/fly.js";
+import { evaluate, probabilityLeft } from "../../web/fly.js";
 
 const model = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const TOLERANCE = 1e-9;
 const failures = [];
 
 for (const sample of model.samples) {
+  const pLeft = probabilityLeft(model, sample.values_trained);
+  if (Math.abs(pLeft - sample.p_left_trained) > TOLERANCE) failures.push(`p_left ${pLeft} != ${sample.p_left_trained}`);
   for (const [trained, key] of [[true, "values_trained"], [false, "values_naive"]]) {
     evaluate(model, sample.state, trained).values.forEach((value, side) => {
       if (Math.abs(value - sample[key][side]) > TOLERANCE) failures.push(`${key}[${side}] ${value} != ${sample[key][side]}`);

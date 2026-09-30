@@ -56,7 +56,10 @@ class BilateralFly:
 
     def choice_probability(self, value_left: float, value_right: float) -> float:
         # tanh form of the logistic avoids overflow at large beta.
-        return 0.5 * (1.0 + np.tanh(0.5 * self.params.bilateral_beta * (value_left - value_right)))
+        committed = 0.5 * (1.0 + np.tanh(0.5 * self.params.bilateral_beta * (value_left - value_right)))
+        # Spontaneous choices ignore the values, so a side the fly has written off still gets retried.
+        spontaneous = self.params.bilateral_spontaneous
+        return spontaneous / 2 + (1.0 - spontaneous) * committed
 
     def act(self, state: np.ndarray) -> Decision:
         glomeruli = self.encoder.glomeruli(state, None)

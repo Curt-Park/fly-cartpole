@@ -74,6 +74,7 @@ def export_model(fly: BilateralFly, baseline: float | None, seed: int) -> dict:
         "reward_per_step": fly.params.reward_per_step,
         "outcome_scale": fly.params.bilateral_outcome_scale,
         "posture_weight": fly.params.posture_weight,
+        "spontaneous": fly.params.bilateral_spontaneous,
         "baseline_window": fly.params.baseline_window,
         "initial_baseline": baseline,
         "state_limits": STATE_LIMITS.tolist(),
@@ -84,7 +85,8 @@ def export_model(fly: BilateralFly, baseline: float | None, seed: int) -> dict:
         },
         "sides": sides,
         "samples": [
-            {"state": state.tolist(), "values_trained": fly.values(state).tolist(), "values_naive": naive_values(fly, state)}
+            {"state": state.tolist(), "values_trained": fly.values(state).tolist(), "values_naive": naive_values(fly, state),
+             "p_left_trained": fly.choice_probability(*fly.values(state))}
             for state in states
         ],
         "physics": physics_check(seed),

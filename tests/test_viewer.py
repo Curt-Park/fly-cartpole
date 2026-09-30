@@ -19,7 +19,7 @@ def test_browser_fly_and_cartpole_match_python(circuit_path, tmp_path):
     from fly_cartpole.export import export
     from fly_cartpole.params import Hyperparameters
 
-    export(seed=0, episodes=3, params=Hyperparameters(kc_sparsity=0.1), circuit_path=circuit_path,
+    export(seed=0, episodes=3, params=Hyperparameters(kc_sparsity=0.1, bilateral_spontaneous=0.1), circuit_path=circuit_path,
            left_circuit_path=circuit_path, web_data_dir=tmp_path)
     result = subprocess.run(["node", str(TESTS / "parity.mjs"), str(tmp_path / "model.json")], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr

@@ -11,6 +11,8 @@ Two fruit fly mushroom bodies, wired synapse by synapse from the
 CartPole with dopamine-gated plasticity. A web viewer runs the trained fly live in the
 browser and shows which mushroom body neurons light up while it balances the pole.
 
+![The web viewer: the cart and pole, both sides' values and the dopamine signal on the left; both mushroom bodies at their MaleCNS cell-body positions on the right](assets/viewer.png)
+
 ## Result
 
 **The fly learns to balance the pole, and passes the "solved" mark.** With its innate wiring

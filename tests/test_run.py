@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 import numpy as np
 import pytest
 
@@ -50,3 +52,11 @@ def test_random_reference_presses_both_buttons_and_never_learns(circuit_path):
     agent.learn(punish=1.0, reward=0.0, next_state=np.zeros(4), terminated=True)
     assert actions == {0, 1}
     assert "random" in CONDITIONS
+
+
+def test_the_posture_signal_reaches_the_learner(circuit_path):
+    agent, schedule = make_agent("random", load_circuit(circuit_path), replace(PARAMS, posture_weight=3.0), seed=0)
+    rewards = []
+    agent.learn = lambda punish, reward, next_state, terminated: rewards.append(reward)
+    run_episodes(agent, schedule, 1, seed=0)
+    assert rewards and all(reward != 0.0 for reward in rewards)

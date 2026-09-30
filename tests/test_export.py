@@ -22,6 +22,7 @@ def test_export_writes_a_model_the_browser_can_run(circuit_path, tmp_path):
     assert len(model["physics"]["states"]) == len(model["physics"]["actions"])
     assert summary["training_episodes"] == 3
     assert model["outcome_scale"] == PARAMS.bilateral_outcome_scale
+    assert model["posture_weight"] == PARAMS.posture_weight
 
 
 def test_cells_without_soma_become_null_in_valid_json(circuit_path, tmp_path):

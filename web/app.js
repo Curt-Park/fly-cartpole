@@ -157,15 +157,22 @@ function newEpisode() {
   render();
 }
 
+// Closer to upright and centred is better; mirrors fly_cartpole.dopamine.posture_potential.
+function posturePotential([x, , theta]) {
+  return -((theta / ANGLE_LIMIT) ** 2 + (x / TRACK_LIMIT) ** 2);
+}
+
 function advance() {
   const current = evaluation;
   const action = Math.random() < probabilityLeft(model, current.values) ? 0 : 1;
+  const before = state;
   state = step(state, action);
   steps += 1;
   const fellOver = fell(state);
   done = fellOver || steps >= MAX_STEPS;
   const limit = baseline();
-  const reward = !fellOver && limit !== null && steps > limit ? model.reward_per_step : 0;
+  const posture = model.posture_weight * (model.gamma * posturePotential(state) - posturePotential(before));
+  const reward = (!fellOver && limit !== null && steps > limit ? model.reward_per_step : 0) + posture;
   const punish = fellOver ? 1 : 0;
   evaluation = evaluate(model, state, trained);
   let upcoming = 0;

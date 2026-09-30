@@ -92,3 +92,18 @@ def test_outcome_scale_shrinks_what_a_fall_teaches(circuit_path):
         fly.learn(punish=1.0, reward=0.0, next_state=STATE, terminated=True)
     assert full.released == pytest.approx((1.0 + predicted, 0.0))
     assert scaled.released == pytest.approx((0.2 + predicted, 0.0))
+
+
+def test_plasticity_settles_with_experience(circuit_path):
+    fly = make(circuit_path, bilateral_learning_rate=0.05, bilateral_settle_episodes=1000.0)
+    assert fly.learning_rate == pytest.approx(0.05)
+    for _ in range(1000):
+        fly.reset_episode()
+    assert fly.learning_rate == pytest.approx(0.025)
+
+
+def test_plasticity_stays_constant_unless_asked_to_settle(circuit_path):
+    fly = make(circuit_path, bilateral_learning_rate=0.05)
+    for _ in range(1000):
+        fly.reset_episode()
+    assert fly.learning_rate == pytest.approx(0.05)

@@ -73,6 +73,7 @@ def export_model(fly: BilateralFly, baseline: float | None, seed: int) -> dict:
         "gamma": fly.params.gamma,
         "reward_per_step": fly.params.reward_per_step,
         "outcome_scale": fly.params.bilateral_outcome_scale,
+        "posture_weight": fly.params.posture_weight,
         "baseline_window": fly.params.baseline_window,
         "initial_baseline": baseline,
         "state_limits": STATE_LIMITS.tolist(),

@@ -39,4 +39,4 @@ def test_tune_writes_hyperparameters_and_the_search_table(circuit_path, tmp_path
 def test_tuning_never_changes_the_task_reward(circuit_path, tmp_path):
     best = tune(configs=2, episodes=3, workers=1, circuit_path=circuit_path, results_dir=tmp_path, base=PARAMS,
                 left_circuit_path=circuit_path, bilateral_episodes=3)
-    assert best.reward_per_step == PARAMS.reward_per_step
+    assert (best.reward_per_step, best.posture_weight, best.gamma) == (PARAMS.reward_per_step, PARAMS.posture_weight, PARAMS.gamma)

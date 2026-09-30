@@ -20,6 +20,7 @@ class Hyperparameters:
     learning_rate: float = 0.5
     gain_decay: float = 0.001
     reward_per_step: float = 0.1
+    posture_weight: float = 3.0
     action_fraction: float = 0.25
     tuning_width: float = 1.0
     baseline_window: int = 20
@@ -33,10 +34,11 @@ class Hyperparameters:
     bilateral_plasticity: str = "push-pull"
     bilateral_initial_gain: float = 0.5
     bilateral_outcome_scale: float = 1.0
+    bilateral_settle_episodes: float = 0.0
     td_actor_lr: float = 0.01
     td_critic_lr: float = 0.05
     td_trace_decay: float = 0.9
-    gamma: float = 0.99
+    gamma: float = 0.998
 
 
 def save_hyperparameters(params: Hyperparameters, path: Path = RESULTS_DIR / HYPERPARAMETERS_FILE) -> None:

@@ -40,7 +40,7 @@ def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: 
             circuit, left_circuit = shuffle_circuit(circuit, rng), shuffle_circuit(left_circuit, rng)
         if condition == "fly-bilateral-frozen":
             params = replace(params, bilateral_learning_rate=0.0)
-        schedule = DopamineSchedule("mean", params.baseline_window, params.reward_per_step)
+        schedule = DopamineSchedule("mean", params.baseline_window, params.reward_per_step, params.posture_weight, params.gamma)
         return build_bilateral(left_circuit, circuit, params, seed), schedule
     if condition == "fly-shuffled":
         circuit = shuffle_circuit(circuit, rng)
@@ -51,7 +51,8 @@ def make_agent(condition: str, circuit: Circuit, params: Hyperparameters, seed: 
     body = MushroomBody(circuit, params.kc_sparsity)
     # Same seed, same glomerulus assignment: conditions are paired per seed.
     encoder = build_encoder(circuit.pn_glomerulus, params.action_fraction, params.tuning_width, seed)
-    schedule = DopamineSchedule("best" if condition == "fly-best" else "mean", params.baseline_window, params.reward_per_step)
+    schedule = DopamineSchedule("best" if condition == "fly-best" else "mean", params.baseline_window, params.reward_per_step,
+                                params.posture_weight, params.gamma)
     if condition == "random":
         return RandomAgent(encoder, body.n_kc, rng), schedule
     agent_class = PREDICTION_ERROR_AGENTS.get(condition, TDAgent if condition == "td" else FlyAgent)
@@ -72,6 +73,7 @@ def run_episodes(agent, schedule: DopamineSchedule, episodes: int, seed: int, on
             next_state, _, terminated, truncated, _ = env.step(decision.action)
             step += 1
             punish, reward = schedule.signal(step, terminated)
+            reward += schedule.posture(state, next_state)
             agent.learn(punish, reward, next_state, terminated)
             if on_step is not None:
                 on_step(episode, step, state, decision, *agent.released, schedule.baseline)

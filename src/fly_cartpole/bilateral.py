@@ -30,10 +30,19 @@ class BilateralFly:
         self.calibration_states = np.random.default_rng(0).uniform(-0.5, 0.5, size=(CALIBRATION_STATES, len(STATE_LIMITS))) * STATE_LIMITS
         if params.bilateral_centre:
             self.offsets = np.mean([self.values(state) for state in self.calibration_states], axis=0)
+        self.episodes_started = -1
         self.reset_episode()
 
     def reset_episode(self) -> None:
+        self.episodes_started += 1
         self.traces = [np.zeros(body.n_kc) for body in self.bodies]
+
+    @property
+    def learning_rate(self) -> float:
+        # Plasticity settles with experience, so a fly that balances well stops unlearning it.
+        settle = self.params.bilateral_settle_episodes
+        rate = self.params.bilateral_learning_rate
+        return rate / (1.0 + self.episodes_started / settle) if settle else rate
 
     def hemisphere(self, glomeruli: np.ndarray, side: int) -> tuple[np.ndarray, np.ndarray, float]:
         body = self.bodies[side]
@@ -80,7 +89,7 @@ class BilateralFly:
             # Push-pull: where the opposing dopamine population lands, the same traced synapses recover instead.
             restore_at = body.dopamine_at_mbon(better, worse) if push_pull else None
             update_gains(self.gains[side], self.traces[side], body.dopamine_at_mbon(worse, better), restore_at,
-                         self.params.bilateral_learning_rate, self.params.bilateral_gain_decay)
+                         self.learning_rate, self.params.bilateral_gain_decay)
 
 
 def build_bilateral(left: Circuit, right: Circuit, params: Hyperparameters, seed: int) -> BilateralFly:

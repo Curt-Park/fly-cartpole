@@ -79,9 +79,9 @@ is righted by the right wing beating harder, matched here to pushing the cart ri
 right when b1 and b2 are more active on the right than on the left.
 
 **Self-tuning.** Each episode the fly tries slightly different gains, `log g = mu + eps` with
-`eps ~ N(0, 0.3²)`. After the episode, dopamine is the episode's length against the fly's recent
+`eps ~ N(0, 0.3²)`. After the episode, the reward signal is the episode's length against the fly's recent
 record, `(length − mean of its last 20) / mean of its last 20`, and the gains move toward trials
-that beat it: `mu += 0.3 · dopamine · eps / 0.3`. Only how strongly each sense drives its sensory
+that beat it: `mu += 0.3 · reward · eps / 0.3`. Only how strongly each sense drives its sensory
 neurons changes.
 
 **What tuning changes.** The circuit is linear and the fly reads only the sign of its steering
@@ -141,7 +141,7 @@ their lead falls from about 48 to about 5 times), and with that the landmark hol
 
 ### Learning past the 500-step cap: what an episode is judged by
 
-Once the landmark fly reached 500 steps in every episode, its dopamine, the episode's length against
+Once the landmark fly reached 500 steps in every episode, its reward signal, the episode's length against
 its recent record, was always zero, so the position gain stopped improving and the cart still
 averaged about 0.5 m from the centre. Each record below judges an episode by something that keeps
 varying after the cap. A probe on tuning seeds 100-109, ten 2,000-step episodes per seed:

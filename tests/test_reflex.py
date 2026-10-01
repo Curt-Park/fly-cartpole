@@ -107,7 +107,7 @@ def test_a_trial_that_beats_the_baseline_pulls_the_gains_toward_it(flight_path):
     fly = adaptive(flight_path, eta=0.5, sigma=0.2)
     fly.records = [10, 10]
     finish_episode_of(fly, 30, [0.1, 0.0, 0.0])
-    # dopamine (30 - 10) / 10 = 2; step 0.5 * 2 * 0.1 / 0.2 = 0.5
+    # reward (30 - 10) / 10 = 2; step 0.5 * 2 * 0.1 / 0.2 = 0.5
     assert fly.log_gains == pytest.approx([0.5, 0.0, 0.0])
 
 
@@ -115,7 +115,7 @@ def test_a_trial_that_falls_short_pushes_the_gains_away(flight_path):
     fly = adaptive(flight_path, eta=0.5, sigma=0.2)
     fly.records = [10, 10]
     finish_episode_of(fly, 5, [0.0, -0.2, 0.0])
-    # dopamine (5 - 10) / 10 = -0.5; step 0.5 * -0.5 * -0.2 / 0.2 = 0.25
+    # reward (5 - 10) / 10 = -0.5; step 0.5 * -0.5 * -0.2 / 0.2 = 0.25
     assert fly.log_gains == pytest.approx([0.0, 0.25, 0.0])
 
 
@@ -177,7 +177,7 @@ def test_a_centred_record_judges_an_episode_by_its_time_near_the_landmark(flight
     for _ in range(30):
         fly.act(np.array([1.2, 0.0, 0.0, 0.0]))  # halfway to the track's edge: half a step's credit
     fly.reset_episode()
-    # score 30 * 0.5 = 15; dopamine (15 - 10) / 10 = 0.5; step 0.5 * 0.5 * 0.1 / 0.2 = 0.125
+    # score 30 * 0.5 = 15; reward (15 - 10) / 10 = 0.5; step 0.5 * 0.5 * 0.1 / 0.2 = 0.125
     assert fly.records[-1] == pytest.approx(15.0) and fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.125])
 
 
@@ -199,7 +199,7 @@ def test_a_balanced_record_gives_half_credit_for_staying_up_and_half_for_staying
     for _ in range(30):
         fly.act(np.array([1.2, 0.0, 0.0, 0.0]))
     fly.reset_episode()
-    # score 30 * (0.5 + 0.5 * 0.5) = 22.5; dopamine (22.5 - 10) / 10 = 1.25; step 0.5 * 1.25 * 0.1 / 0.2 = 0.3125
+    # score 30 * (0.5 + 0.5 * 0.5) = 22.5; reward (22.5 - 10) / 10 = 1.25; step 0.5 * 1.25 * 0.1 / 0.2 = 0.3125
     assert fly.records[-1] == pytest.approx(22.5) and fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.3125])
 
 

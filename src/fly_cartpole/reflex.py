@@ -159,8 +159,8 @@ class AdaptiveReflexFly(ReflexFly):
         if self.records:
             baseline = float(np.mean(self.records[-self.baseline_window:]))
             # Weight perturbation: only magnitudes adapt, the wiring keeps each pathway's sign.
-            dopamine = (record - baseline) / baseline
-            self.log_gains += self.eta * dopamine * self.trial / self.sigma
+            reward = (record - baseline) / baseline
+            self.log_gains += self.eta * reward * self.trial / self.sigma
         self.records.append(record)
 
     def reset_episode(self) -> None:

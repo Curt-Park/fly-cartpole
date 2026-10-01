@@ -27,7 +27,7 @@ REFLEX_CLAIMS = (
     ("self-tuning helps", "fly-reflex-adaptive", "fly-reflex", "greater"),
     ("wiring contributes", "fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", "greater"),
 )
-STATION_CLAIMS = (("position helps", STATION, "fly-reflex-adaptive", "greater"),)
+STATION_CLAIMS = (("position helps within the 500-step cap", STATION, "fly-reflex-adaptive", "greater"),)
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
            STATION: "#1baf7a"}
 PARAMETERS_FILE = "hyperparameters.json"
@@ -51,7 +51,8 @@ def save_reflex_parameters(params: ReflexParameters, path: Path) -> None:
 
 def load_reflex_parameters(path: Path = REFLEX_RESULTS_DIR / PARAMETERS_FILE) -> ReflexParameters:
     if not path.exists():
-        return ReflexParameters()
+        # A silent default would run every comparison with untuned rates.
+        raise FileNotFoundError(f"{path} not found: run `fly-cartpole reflex-tune` first")
     known = {field.name for field in fields(ReflexParameters)}
     return ReflexParameters(**{name: value for name, value in json.loads(path.read_text()).items() if name in known})
 
@@ -243,9 +244,9 @@ def held_summary(held: dict[str, dict[str, dict]], long_episodes: int, long_step
         "",
         f"## Past the 500-step cap: {long_episodes} episodes of up to {long_steps} steps per seed",
         "",
-        "Tuned gains, exploration off. Relative gains have a geometric mean of 1 over the senses each fly tunes.",
+        "Tuned gains, exploration off. Gains are shown relative to the ocelli; only their ratios steer the fly.",
         "",
-        f"| condition | mean length ± std | track exits | mean distance from centre (m) | median relative gains ({', '.join(SENSES)}) |",
+        f"| condition | mean length ± std | track exits | mean distance from centre (m) | median gains relative to the ocelli ({', '.join(SENSES)}) |",
         "|---|---|---|---|---|",
     ]
     per_seed = {}
@@ -253,7 +254,7 @@ def held_summary(held: dict[str, dict[str, dict]], long_episodes: int, long_step
         lengths = np.array([np.mean(outcome["lengths"]) for outcome in by_seed.values()])
         offsets = np.array([outcome["mean_offset"] for outcome in by_seed.values()])
         exits = sum(outcome["exits"] for outcome in by_seed.values()) / (long_episodes * len(by_seed))
-        gains = np.median([outcome["gains"] for outcome in by_seed.values()], axis=0)
+        gains = np.median([np.array(outcome["gains"]) / outcome["gains"][0] for outcome in by_seed.values()], axis=0)
         per_seed[condition] = (lengths, offsets)
         lines.append(f"| {condition} | {lengths.mean():.0f} ± {lengths.std():.0f} | {exits:.0%} | "
                      f"{offsets.mean():.2f} ± {offsets.std():.2f} | {', '.join(f'{gain:.2f}' for gain in gains)} |")

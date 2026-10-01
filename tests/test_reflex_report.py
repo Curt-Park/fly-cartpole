@@ -49,8 +49,37 @@ def test_holding_station_reports_lengths_exits_and_how_far_the_cart_strays(fligh
 def test_station_compare_writes_lengths_long_episodes_and_the_claims(flight_path, tmp_path):
     summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
                               long_episodes=2, long_steps=50)
-    for text in ("position helps", "fly-reflex-station", "track exits"):
+    for text in ("position helps within the 500-step cap", "fly-reflex-station", "track exits"):
         assert text in summary
     stored = json.loads((tmp_path / "station.json").read_text())
     assert set(stored) == {"fly-reflex-adaptive", "fly-reflex-station"} and len(stored["fly-reflex-station"]["1"]["gains"]) == 4
     assert (tmp_path / "fly-reflex-station" / "seed_1.json").exists()
+
+
+def test_a_missing_parameter_file_is_an_error_not_a_silent_default(tmp_path):
+    with pytest.raises(FileNotFoundError, match="reflex-tune"):
+        load_reflex_parameters(tmp_path / "hyperparameters.json")
+
+
+def test_a_landmark_pointing_the_wrong_way_drives_the_cart_off_the_track(flight_path):
+    circuit = load_flight(flight_path)
+    corrective = hold_station(circuit, (1.0, 1.0, 1.0, 0.3), QUICK, seed=0, episodes=5, steps=2000)
+    reversed_sign = hold_station(circuit, (1.0, 1.0, 1.0, -0.3), QUICK, seed=0, episodes=5, steps=2000)
+    assert reversed_sign["exits"] == 5 and corrective["exits"] < reversed_sign["exits"]
+
+
+def test_the_long_episode_claims_favour_the_fly_that_holds_station():
+    from fly_cartpole.reflex_report import held_summary
+
+    def outcome(length, offset, gains):
+        return {"lengths": [length], "exits": int(length < 2000), "mean_offset": offset, "gains": gains}
+
+    held = {
+        "fly-reflex-adaptive": {str(seed): outcome(800 + seed, 0.9, [2.0, 0.5, 1.0, 0.0]) for seed in range(6)},
+        "fly-reflex-station": {str(seed): outcome(2000, 0.1 + seed / 100, [4.0, 1.0, 1.0, 0.25]) for seed in range(6)},
+    }
+    lines = held_summary(held, long_episodes=1, long_steps=2000).splitlines()
+    claims = {line.split(" | ")[0].lstrip("| "): float(line.split(" | ")[-1].rstrip(" |")) for line in lines if line.startswith("| position")}
+    assert claims["position holds the pole longer"] < 0.05 and claims["position keeps the cart near the centre"] < 0.05
+    # Gains are shown relative to the ocelli, so rows that tune different senses stay comparable.
+    assert any("1.00, 0.25, 0.50, 0.00" in line for line in lines) and any("1.00, 0.25, 0.25, 0.06" in line for line in lines)

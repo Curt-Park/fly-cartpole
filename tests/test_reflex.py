@@ -4,7 +4,7 @@ import pytest
 from fly_cartpole.reflex import ReflexFly, load_flight, sensor_drive
 
 HALTERE_LEFT, HALTERE_RIGHT, OCELLUS_LEFT, OCELLUS_RIGHT, HS_LEFT, HS_RIGHT = range(6)
-UNIT_GAINS = (1.0, 1.0, 1.0, 0.0)
+UNIT_GAINS = (1.0, 1.0, 1.0, 0.0, 0.0)
 
 
 def drive_for(flight_path, state, gains=UNIT_GAINS):
@@ -27,14 +27,21 @@ def test_drifting_right_excites_the_left_hs_cell(flight_path):
 
 
 def test_sensor_drive_is_clipped_to_the_working_range_and_scaled_by_each_gain(flight_path):
-    drive = drive_for(flight_path, [0.0, 0.0, 1.0, 0.0], gains=(2.0, 1.0, 1.0, 0.0))
+    drive = drive_for(flight_path, [0.0, 0.0, 1.0, 0.0], gains=(2.0, 1.0, 1.0, 0.0, 0.0))
     assert drive[OCELLUS_RIGHT] == pytest.approx(2.0)
     assert not drive[[HALTERE_LEFT, HALTERE_RIGHT, HS_LEFT, HS_RIGHT]].any()
 
 
 def test_a_cart_right_of_centre_reads_to_the_ocelli_like_a_right_tilt(flight_path):
     # To slide back left the fly must first bank left, so it holds the pole as if it leaned right.
-    drive = drive_for(flight_path, [1.2, 0.0, 0.0, 0.0], gains=(1.0, 1.0, 1.0, 1.0))
+    drive = drive_for(flight_path, [1.2, 0.0, 0.0, 0.0], gains=(1.0, 1.0, 1.0, 1.0, 0.0))
+    assert drive[OCELLUS_LEFT] == pytest.approx(-0.5) and drive[OCELLUS_RIGHT] == pytest.approx(0.5)
+    assert not drive[[HALTERE_LEFT, HALTERE_RIGHT, HS_LEFT, HS_RIGHT]].any()
+
+
+def test_a_landmark_sliding_left_reads_to_the_ocelli_like_a_right_tilt(flight_path):
+    # A cart moving right sees the landmark slide left; the fly banks against the slide to damp it.
+    drive = drive_for(flight_path, [0.0, 1.5, 0.0, 0.0], gains=(1.0, 1.0, 0.0, 0.0, 1.0))
     assert drive[OCELLUS_LEFT] == pytest.approx(-0.5) and drive[OCELLUS_RIGHT] == pytest.approx(0.5)
     assert not drive[[HALTERE_LEFT, HALTERE_RIGHT, HS_LEFT, HS_RIGHT]].any()
 
@@ -125,7 +132,7 @@ def test_every_episode_tries_new_positive_gains_around_the_learned_ones(flight_p
     fly.reset_episode()
     assert fly.trial.any()
     assert np.allclose(fly.gains[:3], np.exp(fly.log_gains + fly.trial)) and min(fly.gains[:3]) > 0
-    assert fly.gains[3] == 0.0
+    assert fly.gains[3:] == (0.0, 0.0)
 
 
 def test_without_station_keeping_the_trials_draw_as_before(flight_path):
@@ -136,8 +143,8 @@ def test_without_station_keeping_the_trials_draw_as_before(flight_path):
 def test_a_station_keeping_fly_tunes_its_position_gain_too(flight_path):
     from fly_cartpole.reflex import AdaptiveReflexFly
 
-    fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, station_keeping=True)
-    assert len(fly.gains) == 4 and fly.gains[3] > 0
+    fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, landmark="position")
+    assert len(fly.gains) == 5 and fly.gains[3] > 0 and fly.gains[4] == 0.0
     fly.records = [10, 10]
     finish_episode_of(fly, 30, [0.0, 0.0, 0.0, 0.1])
     assert fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.5])
@@ -147,7 +154,7 @@ def test_tuned_gains_leave_out_the_trial(flight_path):
     fly = adaptive(flight_path)
     fly.log_gains = np.array([1.0, -1.0, 0.5])
     fly.reset_episode()
-    assert fly.tuned_gains() == pytest.approx((np.e, np.exp(-1.0), np.exp(0.5), 0.0))
+    assert fly.tuned_gains() == pytest.approx((np.e, np.exp(-1.0), np.exp(0.5), 0.0, 0.0))
 
 
 def test_a_shuffled_flight_circuit_keeps_roles_degrees_and_couplings(flight_path):
@@ -164,7 +171,7 @@ def test_a_centred_record_judges_an_episode_by_its_time_near_the_landmark(flight
     from fly_cartpole.reflex import AdaptiveReflexFly
 
     fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2,
-                            station_keeping=True, record="centred")
+                            landmark="position", record="centred")
     fly.records = [10.0, 10.0]
     fly.trial = np.array([0.0, 0.0, 0.0, 0.1])
     for _ in range(30):
@@ -186,7 +193,7 @@ def test_a_balanced_record_gives_half_credit_for_staying_up_and_half_for_staying
     from fly_cartpole.reflex import AdaptiveReflexFly
 
     fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2,
-                            station_keeping=True, record="balanced")
+                            landmark="position", record="balanced")
     fly.records = [10.0, 10.0]
     fly.trial = np.array([0.0, 0.0, 0.0, 0.1])
     for _ in range(30):
@@ -194,3 +201,20 @@ def test_a_balanced_record_gives_half_credit_for_staying_up_and_half_for_staying
     fly.reset_episode()
     # score 30 * (0.5 + 0.5 * 0.5) = 22.5; dopamine (22.5 - 10) / 10 = 1.25; step 0.5 * 1.25 * 0.1 / 0.2 = 0.3125
     assert fly.records[-1] == pytest.approx(22.5) and fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.3125])
+
+
+def test_a_fly_that_sees_the_landmark_move_tunes_that_gain_too(flight_path):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, landmark="motion")
+    assert len(fly.log_gains) == 5 and fly.gains[4] > 0
+    fly.records = [10, 10]
+    finish_episode_of(fly, 30, [0.0, 0.0, 0.0, 0.0, 0.1])
+    assert fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.0, 0.5])
+
+
+def test_an_unknown_landmark_is_an_error(flight_path):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    with pytest.raises(ValueError, match="landmark"):
+        AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, landmark="stripe")

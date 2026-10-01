@@ -14,11 +14,13 @@ from .flight import ROLES
 from .paths import FLIGHT_PATH
 
 # Gains are ordered by sense: ocelli read the angle, halteres the angular velocity, HS cells the cart's drift,
-# and a landmark at the track centre the cart's position.
-SENSES = ("angle", "rate", "drift", "position")
+# and a landmark at the track centre the cart's position and, as it slides across the eye, its motion.
+SENSES = ("angle", "rate", "drift", "position", "motion")
 X, X_DOT, ANGLE, ANGLE_DOT = 0, 1, 2, 3
-WIRING_ONLY = (1.0, 1.0, 1.0, 0.0)
-WITH_LANDMARK = (1.0, 1.0, 1.0, 1.0)
+WIRING_ONLY = (1.0, 1.0, 1.0, 0.0, 0.0)
+WITH_LANDMARK = (1.0, 1.0, 1.0, 1.0, 0.0)
+# How many senses a fly tunes: none of the landmark, its position, or its position and motion.
+LANDMARKS = {"none": 3, "position": 4, "motion": 5}
 # What an episode is judged by: how long the pole stayed up, how long the cart stayed near the landmark, or both halves.
 RECORDS = ("length", "centred", "balanced")
 
@@ -58,14 +60,15 @@ def shuffle_flight(circuit: FlightCircuit, rng: np.random.Generator) -> FlightCi
     return replace(circuit, post=shuffle_edges(circuit.pre, circuit.post, rng))
 
 
-def sensor_drive(circuit: FlightCircuit, state: np.ndarray, gains: tuple[float, float, float, float]) -> np.ndarray:
+def sensor_drive(circuit: FlightCircuit, state: np.ndarray, gains: tuple[float, ...]) -> np.ndarray:
     """A pole tilting or falling right is read as the body rolling right; a cart moving right as leftward optic flow."""
     normalised = np.clip(state / STATE_LIMITS, -1.0, 1.0)
     drive = np.zeros(circuit.size)
     ocellar, haltere, hs = circuit.members("ocellar"), circuit.members("haltere"), circuit.members("hs")
     # The upper ocellus sees more sky, and ocellar L-neurons are hyperpolarised by light.
-    # To slide back toward the landmark a fly first banks toward it, so position shifts the attitude it holds.
-    drive[ocellar] = (gains[0] * normalised[ANGLE] + gains[3] * normalised[X]) * circuit.side[ocellar]
+    # To slide back toward the landmark a fly first banks toward it, so position shifts the attitude it holds;
+    # the landmark's slide across the eye shifts it too, damping the return.
+    drive[ocellar] = (gains[0] * normalised[ANGLE] + gains[3] * normalised[X] + gains[4] * normalised[X_DOT]) * circuit.side[ocellar]
     # The haltere on the side moving down is excited (the corrective haltere-to-b1 reflex).
     drive[haltere] = gains[1] * normalised[ANGLE_DOT] * circuit.side[haltere]
     # Leftward frontal flow is front-to-back on the left eye, the HS cells' preferred direction.
@@ -86,7 +89,7 @@ class ReflexDecision(NamedTuple):
 class ReflexFly:
     """Leaky signed rate units; activity is the deviation from tonic firing, so inhibition is negative."""
 
-    def __init__(self, circuit: FlightCircuit, gains: tuple[float, float, float, float] = WIRING_ONLY,
+    def __init__(self, circuit: FlightCircuit, gains: tuple[float, ...] = WIRING_ONLY,
                  substeps: int = 4, leak: float = 0.5) -> None:
         self.circuit = circuit
         self.gains = tuple(gains)
@@ -120,8 +123,10 @@ class AdaptiveReflexFly(ReflexFly):
     """Tries slightly different sensor gains each episode and keeps changes that beat its recent record."""
 
     def __init__(self, circuit: FlightCircuit, rng: np.random.Generator, eta: float, sigma: float,
-                 baseline_window: int = 20, substeps: int = 4, leak: float = 0.5, station_keeping: bool = False,
+                 baseline_window: int = 20, substeps: int = 4, leak: float = 0.5, landmark: str = "none",
                  record: str = "length") -> None:
+        if landmark not in LANDMARKS:
+            raise ValueError(f"landmark must be one of {tuple(LANDMARKS)}, got {landmark!r}")
         if record not in RECORDS:
             raise ValueError(f"record must be one of {RECORDS}, got {record!r}")
         self.record = record
@@ -129,8 +134,8 @@ class AdaptiveReflexFly(ReflexFly):
         self.eta = eta
         self.sigma = sigma
         self.baseline_window = baseline_window
-        # Without a landmark the position gain stays at zero and is never tried.
-        self.adapted = len(SENSES) if station_keeping else len(SENSES) - 1
+        # Landmark senses the fly does not have stay at zero and are never tried.
+        self.adapted = LANDMARKS[landmark]
         self.log_gains = np.zeros(self.adapted)
         self.trial = np.zeros(self.adapted)
         self.records: list[float] = []

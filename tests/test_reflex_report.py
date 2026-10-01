@@ -41,7 +41,7 @@ def test_the_station_keeping_fly_runs(flight_path):
 
 
 def test_holding_station_reports_lengths_exits_and_how_far_the_cart_strays(flight_path):
-    held = hold_station(load_flight(flight_path), (1.0, 1.0, 1.0, 1.0), QUICK, seed=0, episodes=2, steps=50)
+    held = hold_station(load_flight(flight_path), (1.0, 1.0, 1.0, 1.0, 0.0), QUICK, seed=0, episodes=2, steps=50)
     assert len(held["lengths"]) == 2 and all(1 <= length <= 50 for length in held["lengths"])
     assert 0 <= held["exits"] <= 2 and held["mean_offset"] >= 0
 
@@ -53,7 +53,8 @@ def test_station_compare_writes_lengths_long_episodes_and_the_claims(flight_path
         assert text in summary
     stored = json.loads((tmp_path / "station.json").read_text())
     assert set(stored) == {"fly-reflex-station-fixed", "fly-reflex-adaptive", "fly-reflex-station"}
-    assert len(stored["fly-reflex-station"]["1"]["gains"]) == 4 and stored["fly-reflex-station-fixed"]["1"]["gains"] == [1.0] * 4
+    assert len(stored["fly-reflex-station"]["1"]["gains"]) == 5
+    assert stored["fly-reflex-station-fixed"]["1"]["gains"] == [1.0, 1.0, 1.0, 1.0, 0.0]
     assert (tmp_path / "fly-reflex-station" / "seed_1.json").exists()
 
 
@@ -64,8 +65,8 @@ def test_a_missing_parameter_file_is_an_error_not_a_silent_default(tmp_path):
 
 def test_a_landmark_pointing_the_wrong_way_drives_the_cart_off_the_track(flight_path):
     circuit = load_flight(flight_path)
-    corrective = hold_station(circuit, (1.0, 1.0, 1.0, 0.3), QUICK, seed=0, episodes=5, steps=2000)
-    reversed_sign = hold_station(circuit, (1.0, 1.0, 1.0, -0.3), QUICK, seed=0, episodes=5, steps=2000)
+    corrective = hold_station(circuit, (1.0, 1.0, 1.0, 0.3, 0.0), QUICK, seed=0, episodes=5, steps=2000)
+    reversed_sign = hold_station(circuit, (1.0, 1.0, 1.0, -0.3, 0.0), QUICK, seed=0, episodes=5, steps=2000)
     assert reversed_sign["exits"] == 5 and corrective["exits"] < reversed_sign["exits"]
 
 
@@ -142,3 +143,15 @@ def test_each_finished_seed_is_saved_before_the_comparison_ends(flight_path, tmp
                         long_episodes=2, long_steps=50, conditions=("fly-reflex-station",))
     assert (tmp_path / "fly-reflex-station" / "seed_0.json").exists()
     assert set(json.loads((tmp_path / "station.json").read_text())["fly-reflex-station"]) == {"0"}
+
+
+def test_the_landmark_motion_fly_runs(flight_path):
+    lengths = run_reflex_condition("fly-reflex-station-motion", seed=0, params=QUICK, flight_path=flight_path)
+    assert len(lengths) == QUICK.adapt_episodes
+
+
+def test_station_compare_tests_the_motion_term_against_position_alone(flight_path, tmp_path):
+    summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                              long_episodes=2, long_steps=50, conditions=("fly-reflex-station-balanced", "fly-reflex-station-motion"))
+    for text in ("a motion term keeps the cart nearer the centre", "a motion term changes the 500-step score"):
+        assert text in summary

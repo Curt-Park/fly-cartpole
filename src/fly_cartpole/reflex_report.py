@@ -23,10 +23,12 @@ STATION = "fly-reflex-station"
 STATION_FIXED = "fly-reflex-station-fixed"
 STATION_CENTRED = "fly-reflex-station-centred"
 STATION_BALANCED = "fly-reflex-station-balanced"
-ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED, STATION_BALANCED)
+STATION_MOTION = "fly-reflex-station-motion"
+ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED, STATION_BALANCED, STATION_MOTION)
 STATION_CONDITIONS = (STATION_FIXED, "fly-reflex-adaptive", STATION)
-STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED, STATION_BALANCED)
-RECORD_OF = {STATION_CENTRED: "centred", STATION_BALANCED: "balanced"}
+STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED, STATION_BALANCED, STATION_MOTION)
+RECORD_OF = {STATION_CENTRED: "centred", STATION_BALANCED: "balanced", STATION_MOTION: "balanced"}
+LANDMARK_OF = {STATION: "position", STATION_CENTRED: "position", STATION_BALANCED: "position", STATION_MOTION: "motion"}
 REFLEX_CLAIMS = (
     ("reflex beats chance", "fly-reflex", "random", "greater"),
     ("self-tuning helps", "fly-reflex-adaptive", "fly-reflex", "greater"),
@@ -37,6 +39,7 @@ STATION_CLAIMS = (
     ("self-tuning helps with a landmark", STATION, STATION_FIXED, "greater"),
     ("a centred record changes the 500-step score", STATION_CENTRED, STATION, "two-sided"),
     ("a balanced record changes the 500-step score", STATION_BALANCED, STATION, "two-sided"),
+    ("a motion term changes the 500-step score", STATION_MOTION, STATION_BALANCED, "two-sided"),
 )
 HELD_CLAIMS = (
     ("position holds the pole longer", STATION, "fly-reflex-adaptive", "length"),
@@ -46,9 +49,11 @@ HELD_CLAIMS = (
     ("a centred record holds the pole longer", STATION_CENTRED, STATION, "length"),
     ("a balanced record keeps the cart nearer the centre", STATION_BALANCED, STATION, "offset"),
     ("a balanced record holds the pole longer", STATION_BALANCED, STATION, "length"),
+    ("a motion term keeps the cart nearer the centre", STATION_MOTION, STATION_BALANCED, "offset"),
+    ("a motion term holds the pole longer", STATION_MOTION, STATION_BALANCED, "length"),
 )
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
-           STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834", STATION_BALANCED: "#4a3aa7"}
+           STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834", STATION_BALANCED: "#4a3aa7", STATION_MOTION: "#e87ba4"}
 PARAMETERS_FILE = "hyperparameters.json"
 
 
@@ -98,7 +103,7 @@ def episodes_for(condition: str, params: ReflexParameters) -> int:
 
 
 def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexParameters, seed: int):
-    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED, STATION_BALANCED)
+    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED, STATION_BALANCED, STATION_MOTION)
     if condition not in known:
         raise ValueError(f"condition must be one of {known}, got {condition!r}")
     rng = np.random.default_rng(seed)
@@ -111,8 +116,7 @@ def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexPara
     if condition == "fly-reflex-adaptive-shuffled":
         circuit = shuffle_flight(circuit, rng)
     return AdaptiveReflexFly(circuit, rng, params.eta, params.sigma, params.baseline_window, params.substeps, params.leak,
-                             station_keeping=condition in (STATION, STATION_CENTRED, STATION_BALANCED),
-                             record=RECORD_OF.get(condition, "length"))
+                             landmark=LANDMARK_OF.get(condition, "none"), record=RECORD_OF.get(condition, "length"))
 
 
 def run_reflex_condition(condition: str, seed: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH) -> list[int]:

@@ -57,6 +57,7 @@ def test_the_viewer_runs_the_gains_it_reports(flight_path, tmp_path):
     summary = export_flight(seed=0, params=QUICK, flight_path=flight_path, web_data_dir=tmp_path)
     model = json.loads((tmp_path / "flight.json").read_text())
     # The landmark is part of the fly in both settings, and the parity trajectory exercises every sense.
-    assert model["gains_fixed"] == [1.0, 1.0, 1.0, 1.0, 0.0] and "gains_adapted" not in model
+    assert model["gains_fixed"] == [1.0] * 5 and "gains_adapted" not in model
     assert summary["gains_tuned"] == model["gains_tuned"] == model["trajectory"]["gains"]
-    assert len(model["gains_tuned"]) == 5 and model["gains_tuned"][3] > 0
+    # The viewer runs the reference fly: it learned to balance, then to hold station by the landmark's place and slide.
+    assert len(model["gains_tuned"]) == 5 and min(model["gains_tuned"]) > 0

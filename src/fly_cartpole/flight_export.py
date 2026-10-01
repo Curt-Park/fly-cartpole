@@ -12,8 +12,8 @@ from .dopamine import DopamineSchedule
 from .encoder import STATE_LIMITS
 from .flight import ROLES
 from .paths import FLIGHT_PATH, WEB_DATA_DIR
-from .reflex import WITH_LANDMARK, FlightCircuit, ReflexFly, load_flight, relative_gains
-from .reflex_report import STATION, ReflexParameters, make_reflex_agent
+from .reflex import SENSES, FlightCircuit, ReflexFly, load_flight, relative_gains
+from .reflex_report import STATION_STAGED_MOTION, ReflexParameters, make_reflex_agent
 from .run import run_episodes
 
 
@@ -81,8 +81,8 @@ def write_json(path: Path, payload: dict) -> None:
 
 def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH, web_data_dir: Path = WEB_DATA_DIR) -> dict:
     circuit = load_flight(flight_path)
-    # The landmark fly is the reference: both settings the viewer offers see the landmark.
-    fly = make_reflex_agent(STATION, circuit, params, seed)
+    # The reference fly learns to balance, then to hold station by the landmark's place and slide.
+    fly = make_reflex_agent(STATION_STAGED_MOTION, circuit, params, seed)
     lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), params.adapt_episodes, seed)
     gains_tuned = relative_gains(fly.log_gains)
     write_json(web_data_dir / "flight.json", {
@@ -97,7 +97,7 @@ def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGH
         "state_limits": STATE_LIMITS.tolist(),
         "leak": params.leak,
         "substeps": params.substeps,
-        "gains_fixed": list(WITH_LANDMARK),
+        "gains_fixed": [1.0] * len(SENSES),
         "gains_tuned": gains_tuned,
         "trajectory": reflex_trajectory(circuit, gains_tuned, params, seed),
         "physics": physics_check(seed),

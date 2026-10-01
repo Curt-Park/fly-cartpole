@@ -122,7 +122,7 @@ function drawCartPole([x, , theta], action, done) {
 
 // Live simulation: the reflex runs on the exported circuit; nothing learns in the browser.
 const elements = Object.fromEntries(
-  ["play", "speed", "gains", "episode", "step", "steer", "best", "mean", "steer-bar", "gain-angle", "gain-rate", "gain-drift", "gain-position"]
+  ["play", "speed", "gains", "episode", "step", "steer", "best", "mean", "steer-bar", "gain-angle", "gain-rate", "gain-drift", "gain-position", "gain-motion"]
     .map((id) => [id, document.getElementById(id)]),
 );
 const lengths = [];
@@ -174,7 +174,7 @@ function render() {
   const recent = lengths.slice(-10);
   elements.best.textContent = lengths.length ? Math.max(...lengths) : "–";
   elements.mean.textContent = recent.length ? (recent.reduce((total, length) => total + length, 0) / recent.length).toFixed(0) : "–";
-  ["angle", "rate", "drift", "position"].forEach((name, index) => { elements[`gain-${name}`].textContent = gains[index].toFixed(2); });
+  ["angle", "rate", "drift", "position", "motion"].forEach((name, index) => { elements[`gain-${name}`].textContent = gains[index].toFixed(2); });
 }
 
 function tick(now) {

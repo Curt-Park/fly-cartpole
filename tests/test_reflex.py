@@ -64,3 +64,53 @@ def test_learning_changes_nothing(flight_path):
     before = fly.activity.copy()
     fly.learn(punish=1.0, reward=0.0, next_state=np.zeros(4), terminated=True)
     assert np.array_equal(fly.activity, before) and fly.released == (0.0, 0.0)
+
+
+def adaptive(flight_path, eta=0.5, sigma=0.2):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    return AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=eta, sigma=sigma)
+
+
+def finish_episode_of(fly, steps, trial):
+    fly.trial = np.array(trial, dtype=np.float64)
+    for _ in range(steps):
+        fly.act(np.zeros(4))
+    fly.reset_episode()
+
+
+def test_the_first_episode_sets_the_baseline_without_changing_the_gains(flight_path):
+    fly = adaptive(flight_path)
+    finish_episode_of(fly, 12, [0.1, 0.0, 0.0])
+    assert fly.lengths == [12] and not fly.log_gains.any()
+
+
+def test_a_trial_that_beats_the_baseline_pulls_the_gains_toward_it(flight_path):
+    fly = adaptive(flight_path, eta=0.5, sigma=0.2)
+    fly.lengths = [10, 10]
+    finish_episode_of(fly, 30, [0.1, 0.0, 0.0])
+    # dopamine (30 - 10) / 10 = 2; step 0.5 * 2 * 0.1 / 0.2 = 0.5
+    assert fly.log_gains == pytest.approx([0.5, 0.0, 0.0])
+
+
+def test_a_trial_that_falls_short_pushes_the_gains_away(flight_path):
+    fly = adaptive(flight_path, eta=0.5, sigma=0.2)
+    fly.lengths = [10, 10]
+    finish_episode_of(fly, 5, [0.0, -0.2, 0.0])
+    # dopamine (5 - 10) / 10 = -0.5; step 0.5 * -0.5 * -0.2 / 0.2 = 0.25
+    assert fly.log_gains == pytest.approx([0.0, 0.25, 0.0])
+
+
+def test_the_baseline_is_the_recent_mean_only(flight_path):
+    fly = adaptive(flight_path, eta=0.5, sigma=0.2)
+    fly.lengths = [1000] + [10] * 20
+    finish_episode_of(fly, 10, [0.1, 0.1, 0.1])
+    assert not fly.log_gains.any()
+
+
+def test_every_episode_tries_new_positive_gains_around_the_learned_ones(flight_path):
+    fly = adaptive(flight_path)
+    fly.log_gains = np.array([1.0, -1.0, 0.0])
+    fly.reset_episode()
+    assert fly.trial.any()
+    assert np.allclose(fly.gains, np.exp(fly.log_gains + fly.trial)) and min(fly.gains) > 0

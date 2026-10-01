@@ -97,3 +97,39 @@ class ReflexFly:
 
     def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
         """Reflexes do not learn from outcomes."""
+
+
+class AdaptiveReflexFly(ReflexFly):
+    """Tries slightly different sensor gains each episode and keeps changes that beat its recent record."""
+
+    def __init__(self, circuit: FlightCircuit, rng: np.random.Generator, eta: float, sigma: float,
+                 baseline_window: int = 20, substeps: int = 4, leak: float = 0.5) -> None:
+        self.rng = rng
+        self.eta = eta
+        self.sigma = sigma
+        self.baseline_window = baseline_window
+        self.log_gains = np.zeros(len(SENSES))
+        self.trial = np.zeros(len(SENSES))
+        self.lengths: list[int] = []
+        self.steps = 0
+        super().__init__(circuit, (1.0, 1.0, 1.0), substeps, leak)
+
+    def finish_episode(self, length: int) -> None:
+        if self.lengths:
+            baseline = float(np.mean(self.lengths[-self.baseline_window:]))
+            # Weight perturbation: only magnitudes adapt, the wiring keeps each pathway's sign.
+            dopamine = (length - baseline) / baseline
+            self.log_gains += self.eta * dopamine * self.trial / self.sigma
+        self.lengths.append(length)
+
+    def reset_episode(self) -> None:
+        if self.steps:
+            self.finish_episode(self.steps)
+        self.steps = 0
+        self.trial = self.rng.normal(0.0, self.sigma, len(SENSES))
+        self.gains = tuple(np.exp(self.log_gains + self.trial))
+        super().reset_episode()
+
+    def act(self, state: np.ndarray) -> ReflexDecision:
+        self.steps += 1
+        return super().act(state)

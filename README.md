@@ -102,7 +102,7 @@ The extracted circuit is already in the repository. To extract it again from Mal
 
 ## Working with an AI assistant
 
-In broad strokes, this is how Claude Code (running Claude Opus 5.5 at high effort) and I worked together.
+In broad strokes, this is how Claude Code (running Claude Opus 5.5 at xhigh effort) and I worked together.
 
 - **I set the direction.** Most of the big turns started from my questions or ideas: switching to the
   flight circuit, letting the fly tune itself, taking a hint from hovering, and curriculum learning.

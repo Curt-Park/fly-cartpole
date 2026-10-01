@@ -8,9 +8,10 @@
 
 Two circuits of the fruit fly brain, wired synapse by synapse from the
 [MaleCNS v1.0](https://male-cns.janelia.org/) connectome, balance Gymnasium's CartPole. The
-circuit a fly uses to stay upright in flight does it as a reflex: no synapse changes, and once
-the fly has tuned how strongly it listens to each of its senses, it holds the pole for the full
-500 steps in 99.85% of its final episodes. The two mushroom bodies, the fly's learning centre,
+circuit a fly uses to stay upright in flight does it as a reflex and holds its place against a
+landmark: no synapse changes, and once the fly has tuned how strongly it listens to each of its
+senses, it reaches the 500-step cap and, given four times as long, stays on the track in 95% of
+episodes. The two mushroom bodies, the fly's learning centre,
 learn the task with dopamine-gated plasticity and reach 392.5 steps on average. A web viewer runs
 the reflex fly live in the browser and shows its flight circuit at work.
 
@@ -21,20 +22,61 @@ the reflex fly live in the browser and shows its flight circuit at work.
 ### Result
 
 **The circuit a fly uses to stay upright in flight, wired as measured, balances the pole as a
-reflex, and once the fly has tuned its own sensor gains it holds the pole for the full 500
-steps.** With every sensor gain fixed at 1 it lasts 275.6 steps on average. It does not drop the
-pole: in the first episode of each evaluation seed, 14 of 20 episodes ended with the cart leaving
-the track and the other 6 reached the cap. Letting the fly tune how strongly it listens to each of
-its three senses raises the score to **499.9** on 20 evaluation seeds that no earlier run
-touched: 99.85% of its final 100 episodes reach the 500-step cap, and the shortest lasts 401 steps.
-No synapse changes.
+reflex and holds its place against a landmark. Once the fly has tuned its own sensor gains, it
+lasts the full 500 steps, and given four times as long it stays on the track in 95% of
+episodes.** No synapse changes; the fly tunes only how strongly it listens to each sense. On 20
+evaluation seeds that no earlier run touched (180-199):
 
-![Learning curves of the reflex fly](results/reflex/learning_curves.png)
+| condition | what it is | final-100 mean ± std, 500-step cap | 2,000-step episodes: mean length | track exits | mean distance from centre |
+|---|---|---|---|---|---|
+| `fly-reflex-station-fixed` | the flight circuit as wired, with the landmark, every gain 1 | 353.7 ± 6.4 | 356 | 100% | 0.81 m |
+| `fly-reflex-adaptive` | self-tuned, without the landmark | 499.9 ± 0.2 | 1,580 | 59% | 0.94 m |
+| `fly-reflex-station` | **self-tuned, with the landmark** | **499.6 ± 1.4** | **1,982** | **5%** | **0.51 m** |
+
+The 2,000-step episodes run past CartPole-v1's 500-step cap, ten per seed, with the tuned gains
+and exploration off; there only holding a place still separates the flies, since within the cap
+both self-tuned flies reach 500 in more than 99% of their final episodes. Permutation tests on
+the per-seed means ([results/station/summary.md](results/station/summary.md)): with the landmark
+the fly holds the pole longer and keeps the cart nearer the centre than without it, and
+self-tuning helps the landmark fly (p = 0.0001 each). Within the cap the two self-tuned flies do
+not differ (p = 0.76), because both sit at the ceiling. The self-tuned landmark fly never left the
+track on 15 of its 20 seeds; the fly without a landmark left it on every seed.
+
+### Holding station with a landmark
+
+The first reflex fly had no sense of where the cart is. Nothing pulled the cart back to the
+centre, so it drifted, and 59% of its long episodes ended off the track. A hovering insect holds
+its place against what it sees, and a fly does not push itself sideways: it banks toward where it
+wants to go and lets its tilted thrust carry it there. Visual steering is thought to work the same
+way, by shifting the attitude the haltere reflex holds rather than by driving the wings directly
+(Chan, Prete and Dickinson 1998). The landmark fly copies that. A stripe above the track's centre
+tells it where the cart is, and the cart's position, scaled by the track's half-width (2.4 m), is
+added to the ocellar drive with the angle's sign: a cart right of centre reads like a pole leaning
+right, so the fly holds the pole leaning left, and that carries the cart back. The intuitive
+alternative, pushing toward the centre, makes things worse: a linear reflex with that sign left
+the track in every probe episode. The position gain is a fourth gain the fly tunes; the circuit
+and CartPole-v1 are unchanged.
+
+The landmark helps only once the fly listens to its ocelli enough. As wired, the haltere pathway
+moves the steering signal about 48 times as much as the ocellar one, and with every gain at 1 the
+landmark rides on that weak ocellar pathway: the fixed fly still left the track in every long
+episode. Tuning raises the ocelli against the halteres (median halteres at 0.10 of the ocelli, so
+their lead falls from about 48 to about 5 times), and with that the landmark holds the cart.
+
+### Without a landmark (seeds 160-179)
+
+The first evaluation, before the landmark, compared the wiring alone, self-tuning, self-tuning on
+a shuffled circuit, and chance. With every sensor gain fixed at 1 the fly lasted 275.6 steps on
+average. It did not drop the pole: in the first episode of each seed, 14 of 20 episodes ended with
+the cart leaving the track and the other 6 reached the cap. Self-tuning raised the score to 499.9:
+99.85% of the final 100 episodes reached the 500-step cap, and the shortest lasted 401 steps.
+
+![Learning curves of the reflex fly without a landmark](results/reflex/learning_curves.png)
 
 | condition | what it is | final-100 mean ± std (20 seeds) | episodes reaching 500 |
 |---|---|---|---|
 | `fly-reflex` | the flight circuit as wired, every sensor gain 1 | 275.6 ± 9.4 | 17% |
-| `fly-reflex-adaptive` | the same circuit; the fly tunes its three sensor gains over 600 episodes | **499.9 ± 0.3** | 99.85% |
+| `fly-reflex-adaptive` | the same circuit; the fly tunes its three sensor gains over 600 episodes | 499.9 ± 0.3 | 99.85% |
 | `fly-reflex-adaptive-shuffled` | the same self-tuning on a degree-preserving shuffle of the circuit | 165.9 ± 182.8 | 20% |
 | `random` | uniform random pushes (chance) | 22.1 ± 0.8 | 0% |
 
@@ -43,7 +85,7 @@ Permutation tests on the per-seed final-100 means
 helps, and the measured wiring contributes (p = 0.0001 each). The self-tuning rates were chosen on
 tuning seeds 100-109 ([results/reflex/tuning.json](results/reflex/tuning.json)); all six
 configurations scored between 479 and 500 there, so the result does not hinge on them. The
-evaluation used seeds 160-179.
+evaluation used seeds 160-179, and the landmark flies reuse the same rates.
 
 **What the measured wiring gets right is the sign.** Each shuffled circuit can be sorted by
 whether its ocellar (angle) and haltere (rate) pathways still reach the wing steering motor
@@ -76,7 +118,8 @@ input the circuit gives it in the whole nervous system. The slice is committed a
 **Senses.** The pole's angle is read as the fly's body roll: the ocelli on the side that tips up
 see more sky. Its angular velocity is read by the halteres: the haltere on the side moving down is
 excited. The cart's velocity is horizontal optic flow on the HS cells. Each sense is scaled by its
-working range (0.21 rad, 3.5 rad/s, 3 m/s), clipped to ±1 and multiplied by its gain.
+working range (0.21 rad, 3.5 rad/s, 3 m/s), clipped to ±1 and multiplied by its gain. The
+landmark adds the cart's position (scaled by 2.4 m) to the ocellar drive, times its own gain.
 
 **Circuit.** Leaky linear rate units, whose activity is the deviation from tonic firing (so
 inhibition is negative activity), run four substeps per CartPole step with leak 0.5 and start from
@@ -93,14 +136,15 @@ that beat it: `mu += 0.3 · dopamine · eps / 0.3`. Only how strongly each sense
 neurons changes.
 
 **What tuning changes.** The circuit is linear and the fly reads only the sign of its steering
-signal, so scaling all three gains alike changes nothing; only their ratios matter, and the
-viewer shows them with a geometric mean of 1. As wired, a pole falling right moves the steering
+signal, so scaling every gain alike changes nothing; only their ratios matter, and the viewer
+shows them with a geometric mean of 1. As wired, a pole falling right moves the steering
 signal about 48 times as much through the halteres as a pole leaning right does through the
 ocelli, and the HS cells barely reach the steering motor neurons (1/24 of the ocelli). Such a
 rate-dominated reflex stops the pole from falling but barely corrects a lean, so the cart drifts
-off the track. On seed 0 the fly settled on relative gains of 5.98 (ocelli), 0.32 (halteres) and 0.53 (HS):
-it now listens to its ocelli about 19 times as strongly as to its halteres, which cuts the
-halteres' lead over the ocelli in the steering signal from about 48 times to about 2.6 times.
+off the track. On seed 0, the fly the viewer runs, the landmark fly settled on relative gains of 3.30 (ocelli),
+0.36 (halteres), 0.82 (HS) and 1.02 (landmark): it listens to its ocelli about 9 times as strongly
+as to its halteres, which cuts the halteres' lead over the ocelli in the steering signal from
+about 48 times to about 5.
 
 ### Measured versus invented
 
@@ -108,7 +152,9 @@ halteres' lead over the ocelli in the steering signal from about 48 times to abo
   transmitter; which neurons are haltere afferents, ocellar neurons, HS cells and wing steering
   motor neurons; cell-body positions.
 - **Invented or assumed:** the mapping from CartPole to flight (pole angle as body roll, angular
-  velocity as haltere rotation, cart velocity as optic flow); the haltere's sign, the one sign not
+  velocity as haltere rotation, cart velocity as optic flow, cart position as where a landmark
+  appears); the landmark's signal entering the ocellar drive as a shift of the attitude the fly
+  holds; the haltere's sign, the one sign not
   read from the connectome (it matches the corrective haltere-to-b1 reflex; Dickinson 1999);
   steering by b1 and b2 and its match to a push; the working ranges used for scaling; linear rate
   units and their time constants; transmitter signs (glutamate and histamine are treated as
@@ -117,9 +163,12 @@ halteres' lead over the ocelli in the steering signal from about 48 times to abo
 
 ### Where it falls short
 
-- The fly has no sense of where the cart is, so nothing pulls the cart back to the centre. The
-  self-tuned fly stays on the track for 500 steps, but nothing here shows that it holds its place
-  beyond the cap.
+- The landmark fly still wanders: over the long episodes its cart averages 0.51 m from the centre,
+  and 5% of them end off the track. Its gains are tuned in CartPole-v1's 500-step episodes, where
+  a fly that already reaches 500 gets no more dopamine, so the position gain stops improving once
+  the pole stays up.
+- The landmark's signal is fed to the ocellar neurons directly; the visual pathway that would
+  carry it from the eyes is not part of the circuit.
 - The connectome records chemical synapses only, while in the blowfly the haltere afferents reach
   the b1 motor neuron through electrical synapses as well (Fayyazuddin and Dickinson 1996).
 - The shuffle moves connections together with their weights, so a shuffled neuron can receive up
@@ -129,7 +178,8 @@ halteres' lead over the ocelli in the steering signal from about 48 times to abo
 - One linear rate model; no spikes, no neuromodulation of the flight circuit, no head or neck
   movements.
 - The probes that set the haltere sign and the sensor scaling ran on seeds 100-159 and 500-519;
-  tuning used seeds 100-109 and evaluation seeds 160-179.
+  tuning used seeds 100-109, the first evaluation seeds 160-179 and the landmark evaluation
+  seeds 180-199.
 
 ## Mushroom body fly
 
@@ -351,11 +401,15 @@ python3 -m http.server -d web   # then open http://localhost:8000
 
 The viewer runs the reflex fly live: every neuron of the flight circuit is simulated in the
 browser from the exported couplings, and a test checks its steering against the Python model to
-1e-9. Every episode starts from a random state. Choose "fixed (wiring only)" to watch the circuit
-as wired, or "self-tuned" for the gains the fly tuned for itself over 600 episodes on seed 0, the
-default rather than a seed picked for looks (its final 100 episodes averaged 500 steps).
-Left: the cart, the steering signal (b1 and b2 activity on the right against the left) and the
-relative gains. Right: the circuit's 5,459 neurons in the brain and ventral nerve cord at their
+1e-9. Every episode starts from a random state. Both settings include the landmark, a stripe above
+the track's centre. Choose "fixed (every gain 1)" to watch the circuit as wired, or "self-tuned",
+the default, for the gains the fly tuned for itself over 600 episodes on seed 0, the default seed
+rather than one picked for looks (its final 100 episodes averaged 500 steps). Left: the cart,
+the steering signal (b1 and b2 activity on the right against the left) and the relative gains;
+below them, the same moment seen as flight from behind the fly. The pole's lean is the fly's
+roll, the halteres, ocelli and HS cells light with their activity, the ground flows past as the
+cart moves, and the wing on the side the fly pushes toward beats wider (slowed from about 200
+strokes a second). Right: the circuit's 5,459 neurons in the brain and ventral nerve cord at their
 MaleCNS cell-body positions: halteres (amber), ocelli (green), HS cells (blue), interneurons
 (grey) and wing steering motor neurons (magenta), each brightening with its activity. Haltere
 afferents have their cell bodies in the halteres, outside the nervous system, so they and the few
@@ -369,6 +423,7 @@ uv sync
 uv run fly-cartpole extract-flight   # downloads MaleCNS once; data/flight.npz is already committed
 uv run fly-cartpole reflex-tune      # self-tuning rates on tuning seeds 100-109
 uv run fly-cartpole reflex-compare   # reflex conditions on seeds 160-179, writes results/reflex/
+uv run fly-cartpole station-compare  # the landmark flies on seeds 180-199, writes results/station/
 uv run fly-cartpole export-flight    # tunes the fly on seed 0 and writes web/data/flight.json
 uv run fly-cartpole extract          # the mushroom bodies; data/mb_*.npz are already committed
 uv run fly-cartpole tune             # mushroom body search on tuning seeds 100-139
@@ -376,7 +431,8 @@ uv run fly-cartpole compare          # mushroom body conditions on seeds 70-89, 
 uv run pytest
 ```
 
-On 12 CPU cores `reflex-tune` and `reflex-compare` take about 1.5 hours each, `tune` about
+On 12 CPU cores `reflex-tune` and `reflex-compare` take about 1.5 hours each, `station-compare`
+about 50 minutes, `tune` about
 2 hours 40 minutes and `compare` about 1 hour 35 minutes.
 
 ## Credits
@@ -391,4 +447,5 @@ On 12 CPU cores `reflex-tune` and `reflex-compare` take about 1.5 hours each, `t
   flies).
 - Dickinson 1999, *Philosophical Transactions of the Royal Society B* (haltere-mediated
   equilibrium reflexes); Fayyazuddin and Dickinson 1996, *Journal of Neuroscience* (haltere input
-  to the b1 steering motor neuron).
+  to the b1 steering motor neuron); Chan, Prete and Dickinson 1998, *Science* (visual input to the
+  haltere's steering muscles).

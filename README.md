@@ -12,15 +12,14 @@ If you took a fruit fly's brain as it is, could it solve CartPole? To find out, 
 out of [MaleCNS v1.0](https://male-cns.janelia.org/), the connectome of the adult male fruit fly, and
 wired them to Gymnasium's CartPole-v1.
 
-The rule I cared about most was **to learn without backpropagation or any other machine learning
-machinery, using nothing but the fly's own neurons**. There is no trained artificial network: every
-computation that keeps the pole up is done by fly neurons connected exactly as the connectome records
-them. Learning is limited to what a fly could plausibly do. Every episode the fly nudges its sensor gains
-(how strongly it listens to each sense) at random, and a dopamine signal reports whether that episode
-beat its recent record. The gains then move toward the nudge if it did and away from it if it did not,
-in proportion to the dopamine. The
-wiring comes straight from the connectome, but this learning rule does not: it is an assumption
-inspired by fly biology, not something shown in real flies.
+The rule I cared about most was **to balance the pole with nothing but the fly's own neurons, without
+an artificial neural network trained by backpropagation**. Every computation that keeps the pole up is
+done by fly neurons connected exactly as the connectome records them, and learning never changes those
+connections. All that learning changes are five sensor gains (how strongly each sense is fed into the
+circuit). Every episode the fly nudges its gains at random, and a dopamine signal reports whether that
+episode beat its recent record. The gains then move toward the nudge if it did and away from it if it
+did not, in proportion to the dopamine. The dopamine signal is computed outside the circuit, and
+whether real flies learn this way has not been shown.
 
 The circuit I ended up with is the **flight-stabilisation circuit**, which a fly uses to keep its
 balance in the air. It maps the fly's flight onto CartPole: the circuit balances the pole as a reflex

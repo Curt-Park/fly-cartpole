@@ -40,6 +40,11 @@ lasts at most 500 steps.
 | **landmark + curriculum learning** | five sensor gains | 240-259 | **500.0 ± 0.0** |
 | random pushes (baseline) | – | 160-179 | 22.1 ± 0.8 |
 
+What I find most interesting is that the wired circuit, with no tuning at all, already lasts 275.6
+steps on average. It never dropped the pole: every episode that fell short of 500 steps ended with the
+cart running off the track. The circuit a fly uses to keep its balance in the air balances the pole
+without any adjustment.
+
 Once a fly tunes itself, though, it scores close to 500 almost every time, so differences barely show
 within the cap. I therefore ran the landmark flies for up to 2,000 steps per episode, ten episodes per
 seed, with their tuned gains and no exploration. The comparison is a landmark fly tuned only to keep

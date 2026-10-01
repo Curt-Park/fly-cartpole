@@ -1,0 +1,23 @@
+{
+  "source": "MaleCNS v1.0 (HHMI Janelia, Google Research and collaborators), CC BY 4.0",
+  "files": [
+    "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-annotations-male-cns-v1.0-minconf-0.5.feather",
+    "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/connectome-weights-male-cns-v1.0-minconf-0.5.feather",
+    "https://storage.googleapis.com/flyem-male-cns/v1.0/connectome-data/flat-connectome/body-neurotransmitters-male-cns-v1.0.feather"
+  ],
+  "max_hops": 3,
+  "min_synapses": 5,
+  "counts": {
+    "neurons": 5459,
+    "interneuron": 5159,
+    "haltere": 203,
+    "ocellar": 22,
+    "hs": 8,
+    "wing_motor": 67
+  },
+  "connections": 191953,
+  "synapses": 3563247,
+  "excitatory_neurons": 3045,
+  "inhibitory_neurons": 2325,
+  "neurons_without_position": 558
+}

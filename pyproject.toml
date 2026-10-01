@@ -1,7 +1,7 @@
 [project]
 name = "fly-cartpole"
 version = "0.1.0"
-description = "A connectome mushroom body learning CartPole with its own dopamine plasticity rule"
+description = "A fruit fly's flight-stabilisation circuit, wired from the MaleCNS connectome, balances CartPole as a reflex and tunes its own sensor gains"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.11"

@@ -21,6 +21,7 @@ WIRING_ONLY = (1.0, 1.0, 1.0, 0.0, 0.0)
 WITH_LANDMARK = (1.0, 1.0, 1.0, 1.0, 0.0)
 # How many senses a fly tunes: none of the landmark, its position, or its position and motion.
 LANDMARKS = {"none": 3, "position": 4, "motion": 5}
+BALANCE_SENSES = 3  # angle, rate and drift: the senses that hold the pole up
 # What an episode is judged by: how long the pole stayed up, how long the cart stayed near the landmark, or both halves.
 RECORDS = ("length", "centred", "balanced")
 
@@ -124,12 +125,17 @@ class AdaptiveReflexFly(ReflexFly):
 
     def __init__(self, circuit: FlightCircuit, rng: np.random.Generator, eta: float, sigma: float,
                  baseline_window: int = 20, substeps: int = 4, leak: float = 0.5, landmark: str = "none",
-                 record: str = "length") -> None:
+                 record: str = "length", curriculum: int = 0) -> None:
         if landmark not in LANDMARKS:
             raise ValueError(f"landmark must be one of {tuple(LANDMARKS)}, got {landmark!r}")
         if record not in RECORDS:
             raise ValueError(f"record must be one of {RECORDS}, got {record!r}")
+        if curriculum and landmark == "none":
+            raise ValueError("a curriculum needs a landmark to learn in its second stage")
         self.record = record
+        # Episodes spent learning to balance, judged by length, before learning to hold station; 0 means one stage.
+        self.curriculum = curriculum
+        self.finished = 0
         self.rng = rng
         self.eta = eta
         self.sigma = sigma
@@ -160,13 +166,25 @@ class AdaptiveReflexFly(ReflexFly):
     def reset_episode(self) -> None:
         if self.steps:
             self.finish_episode(self.episode_record())
+            self.finished += 1
+            if self.finished == self.curriculum:
+                # Holding station is judged on its own scale, so its record starts afresh.
+                self.records = []
         self.steps = 0
         self.time_near_landmark = 0.0
         self.trial = self.rng.normal(0.0, self.sigma, self.adapted)
+        if self.holding_station():
+            # Once it balances, the fly keeps its balance gains and explores only the landmark's.
+            self.trial[:BALANCE_SENSES] = 0.0
         self.gains = self.gains_from(self.log_gains + self.trial)
         super().reset_episode()
 
+    def holding_station(self) -> bool:
+        return bool(self.curriculum) and self.finished >= self.curriculum
+
     def episode_record(self) -> float:
+        if self.curriculum:
+            return self.time_near_landmark if self.holding_station() else self.steps
         if self.record == "length":
             return self.steps
         if self.record == "centred":

@@ -218,3 +218,29 @@ def test_an_unknown_landmark_is_an_error(flight_path):
 
     with pytest.raises(ValueError, match="landmark"):
         AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, landmark="stripe")
+
+
+def test_a_staged_fly_learns_to_balance_first_then_to_hold_station_with_balance_frozen(flight_path):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2,
+                            landmark="position", curriculum=2)
+    off_centre = np.array([1.2, 0.0, 0.0, 0.0])
+    for steps in (5, 7):
+        assert fly.trial[:3].any()  # the first stage tries every gain
+        for _ in range(steps):
+            fly.act(off_centre)
+        fly.reset_episode()
+    # The second stage starts its own record, judged on time near the landmark, with the balance gains frozen.
+    assert fly.records == [] and not fly.trial[:3].any() and fly.trial[3] != 0
+    for _ in range(10):
+        fly.act(off_centre)
+    fly.reset_episode()
+    assert fly.records == [pytest.approx(5.0)]
+
+
+def test_a_curriculum_without_a_landmark_is_an_error(flight_path):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    with pytest.raises(ValueError, match="landmark"):
+        AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, curriculum=10)

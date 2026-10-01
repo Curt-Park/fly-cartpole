@@ -155,3 +155,9 @@ def test_station_compare_tests_the_motion_term_against_position_alone(flight_pat
                               long_episodes=2, long_steps=50, conditions=("fly-reflex-station-balanced", "fly-reflex-station-motion"))
     for text in ("a motion term keeps the cart nearer the centre", "a motion term changes the 500-step score"):
         assert text in summary
+
+
+@pytest.mark.parametrize("condition", ["fly-reflex-station-staged", "fly-reflex-station-staged-motion"])
+def test_the_staged_landmark_flies_run(flight_path, condition):
+    lengths = run_reflex_condition(condition, seed=0, params=QUICK, flight_path=flight_path)
+    assert len(lengths) == QUICK.adapt_episodes

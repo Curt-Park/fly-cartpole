@@ -18,8 +18,7 @@ done by fly neurons connected exactly as the connectome records them, and learni
 connections. All that learning changes are five sensor gains (how strongly each sense is fed into the
 circuit). Every episode the fly nudges its gains at random, and a dopamine signal reports whether that
 episode beat its recent record. The gains then move toward the nudge if it did and away from it if it
-did not, in proportion to the dopamine. The dopamine signal is computed outside the circuit, and
-whether real flies learn this way has not been shown.
+did not, in proportion to the dopamine. The dopamine signal is computed outside the circuit.
 
 The circuit I ended up with is the **flight-stabilisation circuit**, which a fly uses to keep its
 balance in the air. It maps the fly's flight onto CartPole: the circuit balances the pole as a reflex

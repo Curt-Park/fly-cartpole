@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import itertools
 import json
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from dataclasses import asdict, dataclass, fields, replace
 from pathlib import Path
 
@@ -22,9 +22,11 @@ REFLEX_CONDITIONS = ("fly-reflex", "fly-reflex-adaptive", "fly-reflex-adaptive-s
 STATION = "fly-reflex-station"
 STATION_FIXED = "fly-reflex-station-fixed"
 STATION_CENTRED = "fly-reflex-station-centred"
-ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED)
+STATION_BALANCED = "fly-reflex-station-balanced"
+ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED, STATION_BALANCED)
 STATION_CONDITIONS = (STATION_FIXED, "fly-reflex-adaptive", STATION)
-STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED,)
+STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED, STATION_BALANCED)
+RECORD_OF = {STATION_CENTRED: "centred", STATION_BALANCED: "balanced"}
 REFLEX_CLAIMS = (
     ("reflex beats chance", "fly-reflex", "random", "greater"),
     ("self-tuning helps", "fly-reflex-adaptive", "fly-reflex", "greater"),
@@ -34,6 +36,7 @@ STATION_CLAIMS = (
     ("position helps within the 500-step cap", STATION, "fly-reflex-adaptive", "greater"),
     ("self-tuning helps with a landmark", STATION, STATION_FIXED, "greater"),
     ("a centred record changes the 500-step score", STATION_CENTRED, STATION, "two-sided"),
+    ("a balanced record changes the 500-step score", STATION_BALANCED, STATION, "two-sided"),
 )
 HELD_CLAIMS = (
     ("position holds the pole longer", STATION, "fly-reflex-adaptive", "length"),
@@ -41,9 +44,11 @@ HELD_CLAIMS = (
     ("self-tuning holds the pole longer with a landmark", STATION, STATION_FIXED, "length"),
     ("a centred record keeps the cart nearer the centre", STATION_CENTRED, STATION, "offset"),
     ("a centred record holds the pole longer", STATION_CENTRED, STATION, "length"),
+    ("a balanced record keeps the cart nearer the centre", STATION_BALANCED, STATION, "offset"),
+    ("a balanced record holds the pole longer", STATION_BALANCED, STATION, "length"),
 )
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
-           STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834"}
+           STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834", STATION_BALANCED: "#4a3aa7"}
 PARAMETERS_FILE = "hyperparameters.json"
 
 
@@ -93,7 +98,7 @@ def episodes_for(condition: str, params: ReflexParameters) -> int:
 
 
 def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexParameters, seed: int):
-    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED)
+    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED, STATION_BALANCED)
     if condition not in known:
         raise ValueError(f"condition must be one of {known}, got {condition!r}")
     rng = np.random.default_rng(seed)
@@ -106,8 +111,8 @@ def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexPara
     if condition == "fly-reflex-adaptive-shuffled":
         circuit = shuffle_flight(circuit, rng)
     return AdaptiveReflexFly(circuit, rng, params.eta, params.sigma, params.baseline_window, params.substeps, params.leak,
-                             station_keeping=condition in (STATION, STATION_CENTRED),
-                             record="centred" if condition == STATION_CENTRED else "length")
+                             station_keeping=condition in (STATION, STATION_CENTRED, STATION_BALANCED),
+                             record=RECORD_OF.get(condition, "length"))
 
 
 def run_reflex_condition(condition: str, seed: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH) -> list[int]:
@@ -238,23 +243,28 @@ def station_compare(seeds: list[int], workers: int, params: ReflexParameters, fl
                     results_dir: Path = STATION_RESULTS_DIR, long_episodes: int = LONG_EPISODES,
                     long_steps: int = LONG_STEPS, conditions: tuple[str, ...] = STATION_CONDITIONS) -> str:
     jobs = [(condition, seed) for condition in conditions for seed in seeds]
-    if workers <= 1:
-        outcomes = [run_station_condition(condition, seed, params, flight_path, long_episodes, long_steps) for condition, seed in jobs]
-    else:
-        with ProcessPoolExecutor(max_workers=workers) as pool:
-            futures = [pool.submit(run_station_condition, condition, seed, params, flight_path, long_episodes, long_steps)
-                       for condition, seed in jobs]
-            outcomes = [future.result() for future in futures]
     held_path = results_dir / "station.json"
     # Conditions run earlier on the same seeds stay in the comparison.
     held: dict[str, dict[str, dict]] = json.loads(held_path.read_text()) if held_path.exists() else {}
-    for (condition, seed), outcome in zip(jobs, outcomes):
+
+    def keep(condition: str, seed: int, outcome: dict) -> None:
+        # Each seed is saved as it finishes, so progress is visible and survives an interruption.
         save_lengths(condition, seed, outcome.pop("episodes"), params, results_dir)
         held.setdefault(condition, {})[str(seed)] = outcome
-    held_path.write_text(json.dumps(held, indent=1) + "\n")
+        held_path.write_text(json.dumps(held, indent=1) + "\n")
+
+    if workers <= 1:
+        for condition, seed in jobs:
+            keep(condition, seed, run_station_condition(condition, seed, params, flight_path, long_episodes, long_steps))
+    else:
+        with ProcessPoolExecutor(max_workers=workers) as pool:
+            futures = {pool.submit(run_station_condition, condition, seed, params, flight_path, long_episodes, long_steps):
+                       (condition, seed) for condition, seed in jobs}
+            for future in as_completed(futures):
+                keep(*futures[future], future.result())
     ordered = [condition for condition in STATION_ORDER if condition in held]
     results = {condition: load_lengths(condition, results_dir) for condition in ordered}
-    held = {condition: held[condition] for condition in ordered}
+    held = {condition: dict(sorted(held[condition].items(), key=lambda item: int(item[0]))) for condition in ordered}
     plot_reflex(results, params, results_dir / "learning_curves.png")
     summary = summarise(results, np.random.default_rng(0), STATION_CLAIMS) + held_summary(held, long_episodes, long_steps)
     (results_dir / "summary.md").write_text(summary)

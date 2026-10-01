@@ -19,8 +19,8 @@ SENSES = ("angle", "rate", "drift", "position")
 X, X_DOT, ANGLE, ANGLE_DOT = 0, 1, 2, 3
 WIRING_ONLY = (1.0, 1.0, 1.0, 0.0)
 WITH_LANDMARK = (1.0, 1.0, 1.0, 1.0)
-# What an episode is judged by: how long the pole stayed up, or how long the cart stayed near the landmark.
-RECORDS = ("length", "centred")
+# What an episode is judged by: how long the pole stayed up, how long the cart stayed near the landmark, or both halves.
+RECORDS = ("length", "centred", "balanced")
 
 
 @dataclass(frozen=True)
@@ -135,7 +135,7 @@ class AdaptiveReflexFly(ReflexFly):
         self.trial = np.zeros(self.adapted)
         self.records: list[float] = []
         self.steps = 0
-        self.score = 0.0
+        self.time_near_landmark = 0.0
         super().__init__(circuit, WIRING_ONLY, substeps, leak)
 
     def gains_from(self, log_gains: np.ndarray) -> tuple[float, ...]:
@@ -154,15 +154,22 @@ class AdaptiveReflexFly(ReflexFly):
 
     def reset_episode(self) -> None:
         if self.steps:
-            self.finish_episode(self.steps if self.record == "length" else self.score)
+            self.finish_episode(self.episode_record())
         self.steps = 0
-        self.score = 0.0
+        self.time_near_landmark = 0.0
         self.trial = self.rng.normal(0.0, self.sigma, self.adapted)
         self.gains = self.gains_from(self.log_gains + self.trial)
         super().reset_episode()
 
+    def episode_record(self) -> float:
+        if self.record == "length":
+            return self.steps
+        if self.record == "centred":
+            return self.time_near_landmark
+        return (self.steps + self.time_near_landmark) / 2
+
     def act(self, state: np.ndarray) -> ReflexDecision:
         self.steps += 1
         # Time near the landmark keeps rewarding station keeping once every episode reaches the cap.
-        self.score += 1.0 - min(abs(state[X]) / STATE_LIMITS[X], 1.0)
+        self.time_near_landmark += 1.0 - min(abs(state[X]) / STATE_LIMITS[X], 1.0)
         return super().act(state)

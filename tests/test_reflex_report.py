@@ -110,3 +110,35 @@ def test_station_compare_tests_the_centred_record_against_the_length_record(flig
                               long_episodes=2, long_steps=50, conditions=("fly-reflex-station", "fly-reflex-station-centred"))
     for text in ("a centred record keeps the cart nearer the centre", "a centred record changes the 500-step score"):
         assert text in summary
+
+
+def test_the_balanced_landmark_fly_runs(flight_path):
+    lengths = run_reflex_condition("fly-reflex-station-balanced", seed=0, params=QUICK, flight_path=flight_path)
+    assert len(lengths) == QUICK.adapt_episodes
+
+
+def test_station_compare_tests_the_balanced_record_against_the_length_record(flight_path, tmp_path):
+    summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                              long_episodes=2, long_steps=50, conditions=("fly-reflex-station", "fly-reflex-station-balanced"))
+    for text in ("a balanced record keeps the cart nearer the centre", "a balanced record changes the 500-step score"):
+        assert text in summary
+
+
+def test_each_finished_seed_is_saved_before_the_comparison_ends(flight_path, tmp_path, monkeypatch):
+    from fly_cartpole import reflex_report
+
+    real_run = reflex_report.run_station_condition
+    calls = []
+
+    def run_then_fail(*args, **kwargs):
+        calls.append(args[:2])
+        if len(calls) == 2:
+            raise RuntimeError("interrupted")
+        return real_run(*args, **kwargs)
+
+    monkeypatch.setattr(reflex_report, "run_station_condition", run_then_fail)
+    with pytest.raises(RuntimeError):
+        station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                        long_episodes=2, long_steps=50, conditions=("fly-reflex-station",))
+    assert (tmp_path / "fly-reflex-station" / "seed_0.json").exists()
+    assert set(json.loads((tmp_path / "station.json").read_text())["fly-reflex-station"]) == {"0"}

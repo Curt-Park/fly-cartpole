@@ -180,3 +180,17 @@ def test_episodes_are_judged_by_length_unless_asked_otherwise(flight_path):
         fly.act(np.array([1.2, 0.0, 0.0, 0.0]))
     fly.reset_episode()
     assert fly.records == [7]
+
+
+def test_a_balanced_record_gives_half_credit_for_staying_up_and_half_for_staying_near_the_landmark(flight_path):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2,
+                            station_keeping=True, record="balanced")
+    fly.records = [10.0, 10.0]
+    fly.trial = np.array([0.0, 0.0, 0.0, 0.1])
+    for _ in range(30):
+        fly.act(np.array([1.2, 0.0, 0.0, 0.0]))
+    fly.reset_episode()
+    # score 30 * (0.5 + 0.5 * 0.5) = 22.5; dopamine (22.5 - 10) / 10 = 1.25; step 0.5 * 1.25 * 0.1 / 0.2 = 0.3125
+    assert fly.records[-1] == pytest.approx(22.5) and fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.3125])

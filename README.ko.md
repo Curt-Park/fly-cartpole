@@ -97,7 +97,7 @@ uv run pytest
 
 ## AI Assistant와의 협업 방식
 
-Claude Code(모델은 Claude Opus 5.5, effort는 high)와의 큰 틀에서의 협업 방식은 다음과 같다.
+Claude Code(모델은 Claude Opus 5.5, effort는 xhigh)와의 큰 틀에서의 협업 방식은 다음과 같다.
 
 - **방향 설정은 내가 했다.** 큰 전환점은 대부분 내 질문이나 아이디어에서 시작되었다. 비행 회로로의
   전환, 자가튜닝, 제자리날기에서 힌트 얻기, 커리큘럼 러닝이 그랬다.

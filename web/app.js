@@ -122,7 +122,7 @@ function drawCartPole([x, , theta], action, done) {
 
 // Live simulation: the reflex runs on the exported circuit; nothing learns in the browser.
 const elements = Object.fromEntries(
-  ["play", "restart", "speed", "gains", "episode", "step", "steer", "best", "mean", "steer-bar", "gain-angle", "gain-rate", "gain-drift", "gain-position"]
+  ["play", "speed", "gains", "episode", "step", "steer", "best", "mean", "steer-bar", "gain-angle", "gain-rate", "gain-drift", "gain-position"]
     .map((id) => [id, document.getElementById(id)]),
 );
 const lengths = [];
@@ -204,7 +204,6 @@ elements.play.addEventListener("click", () => {
   playing = !playing;
   elements.play.textContent = playing ? "Pause" : "Play";
 });
-elements.restart.addEventListener("click", newEpisode);
 elements.gains.addEventListener("change", () => {
   gains = GAIN_SETS[elements.gains.value];
   lengths.length = 0;

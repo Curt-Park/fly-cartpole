@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { ANGLE_LIMIT, MAX_STEPS, TRACK_LIMIT, fell, randomState, step } from "./cartpole.js";
+import { createFlyView } from "./flyview.js";
 import { framesDue } from "./playback.js";
 import { createReflex } from "./reflex.js";
 
@@ -18,6 +19,8 @@ const STYLES = {
 
 const model = await fetch("data/flight.json").then((response) => response.json());
 const reflex = createReflex(model);
+const flyView = createFlyView(document.getElementById("fly"), model);
+const FLAPS_PER_SECOND = 5; // slowed from about 200 so the stroke can be followed
 
 // Scene: one point cloud per role.
 const container = document.getElementById("scene");
@@ -134,6 +137,8 @@ let done;
 let heldSince = null;
 let playing = true;
 let lastTick = performance.now();
+let lastFrame = lastTick;
+let flapPhase = 0;
 let steerScale = 1e-6;
 const idle = new Float64Array(reflex.size);
 
@@ -159,6 +164,7 @@ function render() {
   const { action, steer, activity } = latest;
   drawCartPole(state, action, done);
   clouds.forEach((cloud) => paint(cloud, activity));
+  flyView.update(activity);
   steerScale = Math.max(steerScale * 0.995, Math.abs(steer), 1e-6);
   const bar = elements["steer-bar"].firstElementChild;
   const share = Math.min(1, Math.abs(steer) / steerScale) * 50;
@@ -188,6 +194,9 @@ function tick(now) {
       newEpisode();
     }
   }
+  if (playing && !done) flapPhase += ((now - lastFrame) / 1000) * 2 * Math.PI * FLAPS_PER_SECOND;
+  lastFrame = now;
+  flyView.draw(state, gains, flapPhase);
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(tick);

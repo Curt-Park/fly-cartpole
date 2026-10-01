@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, FLIGHT_PATH, RESULTS_DIR, WEB_DATA_DIR
+from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, FLIGHT_PATH, REFLEX_RESULTS_DIR, RESULTS_DIR, WEB_DATA_DIR
 
 EVALUATION_SEEDS = "70-89"
 # Tuning seeds kept improving up to about 3,000 episodes and slipped by 4,000.
@@ -45,6 +45,14 @@ def build_parser() -> argparse.ArgumentParser:
     extract_flight.add_argument("--cache", type=Path, default=CACHE_DIR)
     extract_flight.add_argument("--output", type=Path, default=FLIGHT_PATH)
 
+    for name, seeds, description in (("reflex-tune", "100-109", "choose the reflex fly's self-tuning rates on tuning seeds"),
+                                     ("reflex-compare", "160-179", "every reflex condition on evaluation seeds, plot and summary")):
+        reflex = commands.add_parser(name, help=description)
+        reflex.add_argument("--seeds", default=seeds)
+        reflex.add_argument("--workers", type=int, default=os.cpu_count() or 1)
+        reflex.add_argument("--flight", type=Path, default=FLIGHT_PATH)
+        reflex.add_argument("--results", type=Path, default=REFLEX_RESULTS_DIR)
+
     tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-139")
     tune.add_argument("--configs", type=int, default=40)
     tune.add_argument("--bilateral-episodes", type=int, default=TRAINING_EPISODES)
@@ -78,6 +86,16 @@ def main(argv: list[str] | None = None) -> None:
         from .flight import extract_flight
 
         print(json.dumps(extract_flight(args.cache, args.output), indent=2))
+        return
+
+    if args.command in ("reflex-tune", "reflex-compare"):
+        from .reflex_report import PARAMETERS_FILE, load_reflex_parameters, reflex_compare, reflex_tune
+
+        if args.command == "reflex-tune":
+            print(reflex_tune(parse_seeds(args.seeds), args.workers, args.flight, args.results))
+        else:
+            print(reflex_compare(parse_seeds(args.seeds), args.workers, load_reflex_parameters(args.results / PARAMETERS_FILE),
+                                 args.flight, args.results))
         return
 
     from .params import HYPERPARAMETERS_FILE, load_hyperparameters

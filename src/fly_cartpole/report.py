@@ -99,7 +99,7 @@ def plot_curves(results: dict[str, dict[int, list[int]]], path: Path) -> None:
     plt.close(figure)
 
 
-def summarise(results: dict[str, dict[int, list[int]]], rng: np.random.Generator) -> str:
+def summarise(results: dict[str, dict[int, list[int]]], rng: np.random.Generator, claims: tuple = CLAIMS) -> str:
     lines = [
         "# Results",
         "",
@@ -114,7 +114,7 @@ def summarise(results: dict[str, dict[int, list[int]]], rng: np.random.Generator
         per_seed = ", ".join(f"{value:.0f}" for value in means)
         lines.append(f"| {condition} | {means.mean():.1f} ± {means.std():.1f} | {reached:.0%} | {per_seed} |")
     lines += ["", "| claim | comparison | permutation p |", "|---|---|---|"]
-    for claim, first, second, alternative in (claim for claim in CLAIMS if claim[1] in results and claim[2] in results):
+    for claim, first, second, alternative in (claim for claim in claims if claim[1] in results and claim[2] in results):
         p_value = permutation_test(final_means(results[first]), final_means(results[second]), rng, alternative=alternative)
         lines.append(f"| {claim} | {first} vs {second} ({alternative}) | {p_value:.4f} |")
     return "\n".join(lines) + "\n"

@@ -20,3 +20,12 @@ def test_extract_flight_defaults_to_the_cache_and_data_folders():
 
     args = build_parser().parse_args(["extract-flight"])
     assert (args.command, args.cache, args.output) == ("extract-flight", CACHE_DIR, FLIGHT_PATH)
+
+
+def test_reflex_commands_default_to_their_own_seeds_and_results():
+    from fly_cartpole.cli import build_parser
+    from fly_cartpole.paths import REFLEX_RESULTS_DIR
+
+    compare = build_parser().parse_args(["reflex-compare"])
+    tune = build_parser().parse_args(["reflex-tune"])
+    assert (compare.seeds, compare.results, tune.seeds, tune.results) == ("160-179", REFLEX_RESULTS_DIR, "100-109", REFLEX_RESULTS_DIR)

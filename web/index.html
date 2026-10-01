@@ -85,7 +85,7 @@
       <li style="--swatch: var(--interneuron)">interneurons</li>
       <li style="--swatch: var(--wing-motor)">wing steering motor neurons</li>
     </ul>
-    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions. Haltere afferents, whose cell bodies sit in the halteres, and the few other neurons without a recorded position are drawn at the mean cell-body position of the neurons they synapse onto. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. The fly also sees where the cart is against a landmark, a stripe above the track's centre, and how fast the stripe slides across its eye; both shift the tilt it holds: to slide back it first banks toward the stripe, and the slide damps the return. Only the ratios of the sensor gains matter, so they are shown with a geometric mean of 1. Nothing learns while you watch. Drag to rotate.</p>
+    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions. Haltere afferents, whose cell bodies sit in the halteres, and the few other neurons without a recorded position are drawn at the mean cell-body position of the neurons they synapse onto. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. The fly also sees where the cart is against a landmark, a stripe above the track's centre, and how fast the stripe slides across its eye; both shift the tilt it holds: to slide back it first banks toward the stripe, and the slide damps the return. Only the ratios of the sensor gains matter, so they are shown with a geometric mean of 1. Nothing learns while you watch. With random pushes the circuit rests, which shows how quickly the pole falls without the fly. Drag to rotate.</p>
   </section>
 </main>
 <footer>
@@ -94,8 +94,9 @@
     <option value="0.25">0.25×</option><option value="0.5">0.5×</option>
     <option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
   </select></label>
-  <label>gains <select id="gains">
-    <option value="fixed">fixed (every gain 1)</option><option value="tuned" selected>self-tuned</option>
+  <label>controller <select id="controller">
+    <option value="random">random pushes</option><option value="fixed">untuned fly (every gain 1)</option>
+    <option value="tuned" selected>self-tuned fly</option>
   </select></label>
 </footer>
 <script type="module" src="app.js"></script>

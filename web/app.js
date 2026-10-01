@@ -122,12 +122,13 @@ function drawCartPole([x, , theta], action, done) {
 
 // Live simulation: the reflex runs on the exported circuit; nothing learns in the browser.
 const elements = Object.fromEntries(
-  ["play", "speed", "gains", "episode", "step", "steer", "best", "mean", "steer-bar", "gain-angle", "gain-rate", "gain-drift", "gain-position", "gain-motion"]
+  ["play", "speed", "controller", "episode", "step", "steer", "best", "mean", "steer-bar", "gain-angle", "gain-rate", "gain-drift", "gain-position", "gain-motion"]
     .map((id) => [id, document.getElementById(id)]),
 );
 const lengths = [];
-const GAIN_SETS = { fixed: model.gains_fixed, tuned: model.gains_tuned };
-let gains = GAIN_SETS[elements.gains.value];
+// Random pushes have no gains: the circuit rests, so nothing on screen suggests the fly is steering.
+const GAIN_SETS = { random: null, fixed: model.gains_fixed, tuned: model.gains_tuned };
+let gains = GAIN_SETS[elements.controller.value];
 let state;
 let steps;
 let latest;
@@ -151,7 +152,12 @@ function newEpisode() {
 }
 
 function advance() {
-  latest = reflex.act(state, gains);
+  if (gains) {
+    latest = reflex.act(state, gains);
+  } else {
+    const action = Math.random() < 0.5 ? 0 : 1;
+    latest = { action, steer: action === 1 ? 1 : -1, activity: idle };
+  }
   state = step(state, latest.action);
   steps += 1;
   done = fell(state) || steps >= MAX_STEPS;
@@ -168,13 +174,13 @@ function render() {
   const share = Math.min(1, Math.abs(steer) / steerScale) * 50;
   bar.style.left = `${steer >= 0 ? 50 : 50 - share}%`;
   bar.style.width = `${share}%`;
-  elements.steer.textContent = `${steer >= 0 ? "+" : ""}${steer.toExponential(2)}`;
+  elements.steer.textContent = gains ? `${steer >= 0 ? "+" : ""}${steer.toExponential(2)}` : `random ${action === 1 ? "right" : "left"}`;
   elements.episode.textContent = lengths.length + (done ? 0 : 1);
   elements.step.textContent = steps;
   const recent = lengths.slice(-10);
   elements.best.textContent = lengths.length ? Math.max(...lengths) : "–";
   elements.mean.textContent = recent.length ? (recent.reduce((total, length) => total + length, 0) / recent.length).toFixed(0) : "–";
-  ["angle", "rate", "drift", "position", "motion"].forEach((name, index) => { elements[`gain-${name}`].textContent = gains[index].toFixed(2); });
+  ["angle", "rate", "drift", "position", "motion"].forEach((name, index) => { elements[`gain-${name}`].textContent = gains ? gains[index].toFixed(2) : "–"; });
 }
 
 function tick(now) {
@@ -204,9 +210,11 @@ elements.play.addEventListener("click", () => {
   playing = !playing;
   elements.play.textContent = playing ? "Pause" : "Play";
 });
-elements.gains.addEventListener("change", () => {
-  gains = GAIN_SETS[elements.gains.value];
+elements.controller.addEventListener("change", () => {
+  gains = GAIN_SETS[elements.controller.value];
   lengths.length = 0;
+  // The random push's full-width bar would otherwise dwarf the fly's steering for tens of seconds.
+  steerScale = 1e-6;
   newEpisode();
 });
 

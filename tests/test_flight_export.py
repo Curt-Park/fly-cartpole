@@ -14,7 +14,7 @@ def test_export_writes_a_circuit_the_browser_can_run(flight_path, tmp_path):
     assert "NaN" not in text
     assert len(model["pre"]) == len(model["post"]) == len(model["coupling"]) == 8
     assert len(model["positions"]) == 9 and model["positions"][8] is None
-    assert model["gains_fixed"] == [1.0, 1.0, 1.0] and min(model["gains_adapted"]) > 0
+    assert min(model["gains_adapted"][:3]) > 0
     trajectory = model["trajectory"]
     assert len(trajectory["states"]) == len(trajectory["actions"]) == len(trajectory["steers"]) > 0
     assert summary["adaptation_episodes"] == 3
@@ -45,14 +45,18 @@ def test_scene_is_centred_on_its_extent_not_on_where_cells_crowd():
 
 def test_adapted_gains_are_reported_relative_to_their_geometric_mean():
     import numpy as np
-    from fly_cartpole.flight_export import relative_gains
+    from fly_cartpole.reflex import relative_gains
 
     gains = relative_gains(np.array([0.9, 0.5, -0.2]))
-    assert np.prod(gains) == pytest.approx(1.0)
+    assert np.prod(gains[:3]) == pytest.approx(1.0) and gains[3] == 0.0
     assert gains[0] / gains[1] == pytest.approx(np.exp(0.4))
+    assert np.prod(relative_gains(np.array([0.9, 0.5, -0.2, 0.4]))) == pytest.approx(1.0)
 
 
 def test_the_viewer_runs_the_gains_it_reports(flight_path, tmp_path):
     summary = export_flight(seed=0, params=QUICK, flight_path=flight_path, web_data_dir=tmp_path)
     model = json.loads((tmp_path / "flight.json").read_text())
-    assert summary["gains_adapted"] == model["gains_adapted"] == model["trajectory"]["gains"]
+    assert summary["gains_adapted"] == model["gains_adapted"] and model["gains_fixed"] == [1.0, 1.0, 1.0, 0.0]
+    # The parity trajectory exercises every sense, the landmark included.
+    assert summary["gains_station"] == model["gains_station"] == model["trajectory"]["gains"]
+    assert len(model["gains_station"]) == 4 and model["gains_station"][3] > 0

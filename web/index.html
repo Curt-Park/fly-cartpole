@@ -61,7 +61,7 @@
     </div>
     <div class="status">episode <span id="episode"></span> · step <span id="step"></span> · steer <span id="steer"></span></div>
     <div class="status">best <span id="best"></span> · mean of last 10 <span id="mean"></span></div>
-    <div class="status">relative gains: ocelli (angle) <span id="gain-angle"></span> · halteres (rate) <span id="gain-rate"></span> · HS (drift) <span id="gain-drift"></span></div>
+    <div class="status">relative gains: ocelli (angle) <span id="gain-angle"></span> · halteres (rate) <span id="gain-rate"></span> · HS (drift) <span id="gain-drift"></span> · landmark (position) <span id="gain-position"></span></div>
   </section>
   <section aria-label="Flight circuit activity">
     <div id="scene"></div>
@@ -72,7 +72,7 @@
       <li style="--swatch: var(--interneuron)">interneurons</li>
       <li style="--swatch: var(--wing-motor)">wing steering motor neurons</li>
     </ul>
-    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions. Haltere afferents, whose cell bodies sit in the halteres, and the few other neurons without a recorded position are drawn at the mean cell-body position of the neurons they synapse onto. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. Only the ratios of the three sensor gains matter, so they are shown with a geometric mean of 1. Nothing learns while you watch. Drag to rotate.</p>
+    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions. Haltere afferents, whose cell bodies sit in the halteres, and the few other neurons without a recorded position are drawn at the mean cell-body position of the neurons they synapse onto. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. With a landmark, the fly also sees where the cart is against a stripe above the track's centre, and that shifts the tilt it holds: to slide back it first banks toward the stripe. Only the ratios of the sensor gains matter, so they are shown with a geometric mean of 1. Nothing learns while you watch. Drag to rotate.</p>
   </section>
 </main>
 <footer>
@@ -84,6 +84,7 @@
   </select></label>
   <label>gains <select id="gains">
     <option value="fixed">fixed (wiring only)</option><option value="adapted" selected>self-tuned</option>
+    <option value="station">self-tuned, with a landmark</option>
   </select></label>
 </footer>
 <script type="module" src="app.js"></script>

@@ -1,6 +1,7 @@
 // The reflex fly in the browser; mirrors fly_cartpole.reflex.ReflexFly operation by operation.
 const ANGLE = 2;
 const ANGLE_DOT = 3;
+const X = 0;
 const X_DOT = 1;
 
 export function createReflex(model) {
@@ -24,7 +25,7 @@ export function createReflex(model) {
   function sensorDrive(state, gains) {
     const normalised = state.map((value, index) => Math.min(1, Math.max(-1, value / model.state_limits[index])));
     drive.fill(0);
-    for (const index of ocellar) drive[index] = gains[0] * normalised[ANGLE] * side[index];
+    for (const index of ocellar) drive[index] = (gains[0] * normalised[ANGLE] + gains[3] * normalised[X]) * side[index];
     for (const index of haltere) drive[index] = gains[1] * normalised[ANGLE_DOT] * side[index];
     for (const index of hs) drive[index] = -gains[2] * normalised[X_DOT] * side[index];
   }

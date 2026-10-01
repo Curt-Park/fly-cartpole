@@ -9,7 +9,8 @@ from pathlib import Path
 
 import numpy as np
 
-from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, FLIGHT_PATH, REFLEX_RESULTS_DIR, RESULTS_DIR, WEB_DATA_DIR
+from .paths import (CACHE_DIR, CIRCUIT_PATH, DATA_DIR, FLIGHT_PATH, REFLEX_RESULTS_DIR, RESULTS_DIR, STATION_RESULTS_DIR,
+                    WEB_DATA_DIR)
 
 EVALUATION_SEEDS = "70-89"
 # Tuning seeds kept improving up to about 3,000 episodes and slipped by 4,000.
@@ -53,6 +54,14 @@ def build_parser() -> argparse.ArgumentParser:
         reflex.add_argument("--flight", type=Path, default=FLIGHT_PATH)
         reflex.add_argument("--results", type=Path, default=REFLEX_RESULTS_DIR)
 
+    station = commands.add_parser("station-compare", help="the self-tuned reflex fly with and without a landmark, on fresh seeds")
+    station.add_argument("--seeds", default="180-199")
+    station.add_argument("--workers", type=int, default=os.cpu_count() or 1)
+    station.add_argument("--flight", type=Path, default=FLIGHT_PATH)
+    # The self-tuning rates come from reflex-tune; nothing is re-tuned for the landmark.
+    station.add_argument("--reflex-results", type=Path, default=REFLEX_RESULTS_DIR)
+    station.add_argument("--results", type=Path, default=STATION_RESULTS_DIR)
+
     tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-139")
     tune.add_argument("--configs", type=int, default=40)
     tune.add_argument("--bilateral-episodes", type=int, default=TRAINING_EPISODES)
@@ -95,6 +104,13 @@ def main(argv: list[str] | None = None) -> None:
 
         params = load_reflex_parameters(args.results / PARAMETERS_FILE)
         print(json.dumps(export_flight(args.seed, params, args.flight, args.web_data), indent=2))
+        return
+
+    if args.command == "station-compare":
+        from .reflex_report import PARAMETERS_FILE, load_reflex_parameters, station_compare
+
+        params = load_reflex_parameters(args.reflex_results / PARAMETERS_FILE)
+        print(station_compare(parse_seeds(args.seeds), args.workers, params, args.flight, args.results))
         return
 
     if args.command in ("reflex-tune", "reflex-compare"):

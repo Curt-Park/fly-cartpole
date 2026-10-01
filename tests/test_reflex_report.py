@@ -2,8 +2,10 @@ import json
 
 import pytest
 
-from fly_cartpole.reflex_report import (REFLEX_CONDITIONS, ReflexParameters, episodes_for, load_reflex_parameters,
-                                        reflex_compare, reflex_tune, run_reflex_condition)
+from fly_cartpole.reflex import load_flight
+from fly_cartpole.reflex_report import (REFLEX_CONDITIONS, ReflexParameters, episodes_for, hold_station,
+                                        load_reflex_parameters, reflex_compare, reflex_tune, run_reflex_condition,
+                                        station_compare)
 
 QUICK = ReflexParameters(adapt_episodes=3, fixed_episodes=2)
 
@@ -31,3 +33,24 @@ def test_reflex_compare_writes_lengths_a_plot_and_the_claims(flight_path, tmp_pa
     for claim in ("reflex beats chance", "self-tuning helps", "wiring contributes"):
         assert claim in summary
     assert (tmp_path / "learning_curves.png").exists() and (tmp_path / "fly-reflex" / "seed_1.json").exists()
+
+
+def test_the_station_keeping_fly_runs(flight_path):
+    lengths = run_reflex_condition("fly-reflex-station", seed=0, params=QUICK, flight_path=flight_path)
+    assert len(lengths) == QUICK.adapt_episodes
+
+
+def test_holding_station_reports_lengths_exits_and_how_far_the_cart_strays(flight_path):
+    held = hold_station(load_flight(flight_path), (1.0, 1.0, 1.0, 1.0), QUICK, seed=0, episodes=2, steps=50)
+    assert len(held["lengths"]) == 2 and all(1 <= length <= 50 for length in held["lengths"])
+    assert 0 <= held["exits"] <= 2 and held["mean_offset"] >= 0
+
+
+def test_station_compare_writes_lengths_long_episodes_and_the_claims(flight_path, tmp_path):
+    summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                              long_episodes=2, long_steps=50)
+    for text in ("position helps", "fly-reflex-station", "track exits"):
+        assert text in summary
+    stored = json.loads((tmp_path / "station.json").read_text())
+    assert set(stored) == {"fly-reflex-adaptive", "fly-reflex-station"} and len(stored["fly-reflex-station"]["1"]["gains"]) == 4
+    assert (tmp_path / "fly-reflex-station" / "seed_1.json").exists()

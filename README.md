@@ -24,10 +24,10 @@ inspired by fly biology, not something shown in real flies.
 
 The circuit I ended up with is the **flight-stabilisation circuit**, which a fly uses to keep its
 balance in the air. It maps the fly's flight onto CartPole: the circuit balances the pole as a reflex
-and holds its place by watching a landmark. The web viewer simulates all 5,459 of its neurons live in
+and holds its place by watching a landmark. The [web viewer](https://curt-park.github.io/fly-cartpole/) simulates all 5,459 of its neurons live in
 the browser, so you can watch the fly at work.
 
-![The web viewer: the cart and pole, the steering signal and the sensor gains, the fly seen from behind, and the flight circuit at its MaleCNS cell-body positions](assets/viewer.gif)
+[![The web viewer: the cart and pole, the steering signal and the sensor gains, the fly seen from behind, and the flight circuit at its MaleCNS cell-body positions](assets/viewer.gif)](https://curt-park.github.io/fly-cartpole/)
 
 ## Results
 

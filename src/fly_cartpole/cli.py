@@ -9,7 +9,7 @@ from pathlib import Path
 
 import numpy as np
 
-from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, RESULTS_DIR, WEB_DATA_DIR
+from .paths import CACHE_DIR, CIRCUIT_PATH, DATA_DIR, FLIGHT_PATH, RESULTS_DIR, WEB_DATA_DIR
 
 EVALUATION_SEEDS = "70-89"
 # Tuning seeds kept improving up to about 3,000 episodes and slipped by 4,000.
@@ -41,6 +41,10 @@ def build_parser() -> argparse.ArgumentParser:
     extract.add_argument("--cache", type=Path, default=CACHE_DIR)
     extract.add_argument("--data", type=Path, default=DATA_DIR)
 
+    extract_flight = commands.add_parser("extract-flight", help="build data/flight.npz: halteres, ocelli and HS cells to the wing steering motors")
+    extract_flight.add_argument("--cache", type=Path, default=CACHE_DIR)
+    extract_flight.add_argument("--output", type=Path, default=FLIGHT_PATH)
+
     tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-139")
     tune.add_argument("--configs", type=int, default=40)
     tune.add_argument("--bilateral-episodes", type=int, default=TRAINING_EPISODES)
@@ -68,6 +72,12 @@ def main(argv: list[str] | None = None) -> None:
         from .extract import extract
 
         print(json.dumps(extract(args.cache, args.data), indent=2))
+        return
+
+    if args.command == "extract-flight":
+        from .flight import extract_flight
+
+        print(json.dumps(extract_flight(args.cache, args.output), indent=2))
         return
 
     from .params import HYPERPARAMETERS_FILE, load_hyperparameters

@@ -45,6 +45,7 @@ STATION_CLAIMS = (
     ("a balanced record changes the 500-step score", STATION_BALANCED, STATION, "two-sided"),
     ("a motion term changes the 500-step score", STATION_MOTION, STATION_BALANCED, "two-sided"),
     ("staging changes the 500-step score", STATION_STAGED, STATION, "two-sided"),
+    ("curriculum learning changes the 500-step score", STATION_STAGED_MOTION, STATION, "two-sided"),
 )
 HELD_CLAIMS = (
     ("position holds the pole longer", STATION, "fly-reflex-adaptive", "length"),
@@ -60,6 +61,8 @@ HELD_CLAIMS = (
     ("staging holds the pole longer", STATION_STAGED, STATION, "length"),
     ("a motion term helps the staged fly keep the cart near the centre", STATION_STAGED_MOTION, STATION_STAGED, "offset"),
     ("a motion term helps the staged fly hold the pole longer", STATION_STAGED_MOTION, STATION_STAGED, "length"),
+    ("curriculum learning keeps the cart nearer the centre", STATION_STAGED_MOTION, STATION, "offset"),
+    ("curriculum learning holds the pole longer", STATION_STAGED_MOTION, STATION, "length"),
 )
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
            STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834", STATION_BALANCED: "#4a3aa7", STATION_MOTION: "#e87ba4",

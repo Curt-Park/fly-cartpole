@@ -161,3 +161,11 @@ def test_station_compare_tests_the_motion_term_against_position_alone(flight_pat
 def test_the_staged_landmark_flies_run(flight_path, condition):
     lengths = run_reflex_condition(condition, seed=0, params=QUICK, flight_path=flight_path)
     assert len(lengths) == QUICK.adapt_episodes
+
+
+def test_station_compare_tests_the_staged_motion_fly_against_the_reference(flight_path, tmp_path):
+    summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                              long_episodes=2, long_steps=50, conditions=("fly-reflex-station-staged-motion", "fly-reflex-station"))
+    for text in ("curriculum learning keeps the cart nearer the centre", "curriculum learning holds the pole longer",
+                 "curriculum learning changes the 500-step score"):
+        assert text in summary

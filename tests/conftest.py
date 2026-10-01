@@ -43,3 +43,32 @@ def circuit_path(tmp_path):
     path = tmp_path / "mb_right.npz"
     np.savez_compressed(path, **synthetic_arrays())
     return path
+
+
+def synthetic_flight_arrays() -> dict[str, np.ndarray]:
+    """Sensors wired straight onto b1: halteres and ocelli onto the same side, HS weakly onto the same side."""
+    roles = [1, 1, 2, 2, 3, 3, 4, 4, 4]  # halteres, ocelli, HS, b1 L, b1 R, b3 L
+    sides = [-1, 1, -1, 1, -1, 1, -1, 1, -1]
+    pre = [0, 1, 2, 3, 4, 5, 6, 7]
+    post = [6, 7, 6, 7, 6, 7, 8, 8]
+    coupling = [0.5, 0.5, 0.3, 0.3, 0.1, 0.1, 0.2, -0.2]
+    soma = np.arange(27, dtype=np.float64).reshape(9, 3)
+    soma[8] = np.nan
+    return {
+        "body_id": np.arange(9, dtype=np.int64) + 500,
+        "type": np.array(["SApp", "SApp", "OCG01a", "OCG01a", "HSN", "HSN", "b1 MN", "b1 MN", "b3 MN"]),
+        "role": np.array(roles, dtype=np.int8),
+        "side": np.array(sides, dtype=np.int8),
+        "amplitude": np.array([False] * 6 + [True, True, False]),
+        "soma": soma,
+        "pre": np.array(pre, dtype=np.int32),
+        "post": np.array(post, dtype=np.int32),
+        "coupling": np.array(coupling, dtype=np.float64),
+    }
+
+
+@pytest.fixture
+def flight_path(tmp_path):
+    path = tmp_path / "flight.npz"
+    np.savez_compressed(path, **synthetic_flight_arrays())
+    return path

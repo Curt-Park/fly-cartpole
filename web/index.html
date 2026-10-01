@@ -51,7 +51,7 @@
 <body>
 <header>
   <h1>fly-cartpole</h1>
-  <p>The circuit a fruit fly uses to stay upright in flight, wired from the MaleCNS connectome, balances a pole without learning. Every episode starts from a random state, and every neuron of the circuit is simulated live in your browser.</p>
+  <p>The circuit a fruit fly uses to stay upright in flight, wired from the MaleCNS connectome, balances a pole as a reflex: no synapse changes. Every episode starts from a random state, and every neuron of the circuit is simulated live in your browser.</p>
 </header>
 <main>
   <section aria-label="CartPole">
@@ -61,7 +61,7 @@
     </div>
     <div class="status">episode <span id="episode"></span> · step <span id="step"></span> · steer <span id="steer"></span></div>
     <div class="status">best <span id="best"></span> · mean of last 10 <span id="mean"></span></div>
-    <div class="status">gains: ocelli (angle) <span id="gain-angle"></span> · halteres (rate) <span id="gain-rate"></span> · HS (drift) <span id="gain-drift"></span></div>
+    <div class="status">relative gains: ocelli (angle) <span id="gain-angle"></span> · halteres (rate) <span id="gain-rate"></span> · HS (drift) <span id="gain-drift"></span></div>
   </section>
   <section aria-label="Flight circuit activity">
     <div id="scene"></div>
@@ -72,7 +72,7 @@
       <li style="--swatch: var(--interneuron)">interneurons</li>
       <li style="--swatch: var(--wing-motor)">wing steering motor neurons</li>
     </ul>
-    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions; haltere afferents, whose cell bodies sit in the halteres, are drawn where they synapse. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. Nothing learns while you watch. Drag to rotate.</p>
+    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions. Haltere afferents, whose cell bodies sit in the halteres, and the few other neurons without a recorded position are drawn at the mean cell-body position of the neurons they synapse onto. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. Only the ratios of the three sensor gains matter, so they are shown with a geometric mean of 1. Nothing learns while you watch. Drag to rotate.</p>
   </section>
 </main>
 <footer>

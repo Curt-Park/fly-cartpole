@@ -39,6 +39,11 @@ def display_positions(circuit: FlightCircuit) -> np.ndarray:
     return positions
 
 
+def relative_gains(log_gains: np.ndarray) -> list[float]:
+    """Gains with a geometric mean of 1: scaling all three alike leaves the linear reflex's choices unchanged."""
+    return np.exp(log_gains - log_gains.mean()).tolist()
+
+
 def physics_check(seed: int, steps: int = 60) -> dict:
     """A Gymnasium trajectory the browser's CartPole must reproduce."""
     env = gym.make("CartPole-v1")
@@ -83,7 +88,7 @@ def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGH
     circuit = load_flight(flight_path)
     adaptive = make_reflex_agent("fly-reflex-adaptive", circuit, params, seed)
     lengths = run_episodes(adaptive, DopamineSchedule("mean", params.baseline_window, 0.0), params.adapt_episodes, seed)
-    gains_adapted = np.exp(adaptive.log_gains).tolist()
+    gains_adapted = relative_gains(adaptive.log_gains)
     write_json(web_data_dir / "flight.json", {
         "roles": list(ROLES),
         "role": circuit.role.tolist(),

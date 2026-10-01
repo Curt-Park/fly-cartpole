@@ -1,4 +1,5 @@
 import json
+import pytest
 
 from fly_cartpole.flight_export import export_flight
 from fly_cartpole.reflex_report import ReflexParameters
@@ -40,3 +41,18 @@ def test_scene_is_centred_on_its_extent_not_on_where_cells_crowd():
     crowded = np.array([[0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 0.0], [0.0, 0.0, 10.0]])
     depth = [point[2] for point in scene_positions(crowded)]
     assert min(depth) == -1.0 and max(depth) == 1.0
+
+
+def test_adapted_gains_are_reported_relative_to_their_geometric_mean():
+    import numpy as np
+    from fly_cartpole.flight_export import relative_gains
+
+    gains = relative_gains(np.array([0.9, 0.5, -0.2]))
+    assert np.prod(gains) == pytest.approx(1.0)
+    assert gains[0] / gains[1] == pytest.approx(np.exp(0.4))
+
+
+def test_the_viewer_runs_the_gains_it_reports(flight_path, tmp_path):
+    summary = export_flight(seed=0, params=QUICK, flight_path=flight_path, web_data_dir=tmp_path)
+    model = json.loads((tmp_path / "flight.json").read_text())
+    assert summary["gains_adapted"] == model["gains_adapted"] == model["trajectory"]["gains"]

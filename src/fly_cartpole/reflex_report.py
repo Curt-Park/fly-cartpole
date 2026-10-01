@@ -21,8 +21,10 @@ from .run import load_lengths, run_episodes, save_lengths
 REFLEX_CONDITIONS = ("fly-reflex", "fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", "random")
 STATION = "fly-reflex-station"
 STATION_FIXED = "fly-reflex-station-fixed"
-ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION)
+STATION_CENTRED = "fly-reflex-station-centred"
+ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED)
 STATION_CONDITIONS = (STATION_FIXED, "fly-reflex-adaptive", STATION)
+STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED,)
 REFLEX_CLAIMS = (
     ("reflex beats chance", "fly-reflex", "random", "greater"),
     ("self-tuning helps", "fly-reflex-adaptive", "fly-reflex", "greater"),
@@ -31,14 +33,17 @@ REFLEX_CLAIMS = (
 STATION_CLAIMS = (
     ("position helps within the 500-step cap", STATION, "fly-reflex-adaptive", "greater"),
     ("self-tuning helps with a landmark", STATION, STATION_FIXED, "greater"),
+    ("a centred record changes the 500-step score", STATION_CENTRED, STATION, "two-sided"),
 )
 HELD_CLAIMS = (
     ("position holds the pole longer", STATION, "fly-reflex-adaptive", "length"),
     ("position keeps the cart near the centre", STATION, "fly-reflex-adaptive", "offset"),
     ("self-tuning holds the pole longer with a landmark", STATION, STATION_FIXED, "length"),
+    ("a centred record keeps the cart nearer the centre", STATION_CENTRED, STATION, "offset"),
+    ("a centred record holds the pole longer", STATION_CENTRED, STATION, "length"),
 )
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
-           STATION: "#1baf7a", STATION_FIXED: "#1baf7a"}
+           STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834"}
 PARAMETERS_FILE = "hyperparameters.json"
 
 
@@ -88,7 +93,7 @@ def episodes_for(condition: str, params: ReflexParameters) -> int:
 
 
 def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexParameters, seed: int):
-    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED)
+    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED)
     if condition not in known:
         raise ValueError(f"condition must be one of {known}, got {condition!r}")
     rng = np.random.default_rng(seed)
@@ -101,7 +106,8 @@ def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexPara
     if condition == "fly-reflex-adaptive-shuffled":
         circuit = shuffle_flight(circuit, rng)
     return AdaptiveReflexFly(circuit, rng, params.eta, params.sigma, params.baseline_window, params.substeps, params.leak,
-                             station_keeping=condition == STATION)
+                             station_keeping=condition in (STATION, STATION_CENTRED),
+                             record="centred" if condition == STATION_CENTRED else "length")
 
 
 def run_reflex_condition(condition: str, seed: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH) -> list[int]:
@@ -246,7 +252,7 @@ def station_compare(seeds: list[int], workers: int, params: ReflexParameters, fl
         save_lengths(condition, seed, outcome.pop("episodes"), params, results_dir)
         held.setdefault(condition, {})[str(seed)] = outcome
     held_path.write_text(json.dumps(held, indent=1) + "\n")
-    ordered = [condition for condition in STATION_CONDITIONS if condition in held]
+    ordered = [condition for condition in STATION_ORDER if condition in held]
     results = {condition: load_lengths(condition, results_dir) for condition in ordered}
     held = {condition: held[condition] for condition in ordered}
     plot_reflex(results, params, results_dir / "learning_curves.png")

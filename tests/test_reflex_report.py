@@ -98,3 +98,15 @@ def test_station_compare_adds_conditions_to_earlier_results(flight_path, tmp_pat
     assert set(json.loads((tmp_path / "station.json").read_text())) == {"fly-reflex-adaptive", "fly-reflex-station", "fly-reflex-station-fixed"}
     for text in ("fly-reflex-adaptive", "fly-reflex-station-fixed", "self-tuning helps with a landmark"):
         assert text in summary
+
+
+def test_the_centred_landmark_fly_runs(flight_path):
+    lengths = run_reflex_condition("fly-reflex-station-centred", seed=0, params=QUICK, flight_path=flight_path)
+    assert len(lengths) == QUICK.adapt_episodes
+
+
+def test_station_compare_tests_the_centred_record_against_the_length_record(flight_path, tmp_path):
+    summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                              long_episodes=2, long_steps=50, conditions=("fly-reflex-station", "fly-reflex-station-centred"))
+    for text in ("a centred record keeps the cart nearer the centre", "a centred record changes the 500-step score"):
+        assert text in summary

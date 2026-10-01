@@ -93,12 +93,12 @@ def finish_episode_of(fly, steps, trial):
 def test_the_first_episode_sets_the_baseline_without_changing_the_gains(flight_path):
     fly = adaptive(flight_path)
     finish_episode_of(fly, 12, [0.1, 0.0, 0.0])
-    assert fly.lengths == [12] and not fly.log_gains.any()
+    assert fly.records == [12] and not fly.log_gains.any()
 
 
 def test_a_trial_that_beats_the_baseline_pulls_the_gains_toward_it(flight_path):
     fly = adaptive(flight_path, eta=0.5, sigma=0.2)
-    fly.lengths = [10, 10]
+    fly.records = [10, 10]
     finish_episode_of(fly, 30, [0.1, 0.0, 0.0])
     # dopamine (30 - 10) / 10 = 2; step 0.5 * 2 * 0.1 / 0.2 = 0.5
     assert fly.log_gains == pytest.approx([0.5, 0.0, 0.0])
@@ -106,7 +106,7 @@ def test_a_trial_that_beats_the_baseline_pulls_the_gains_toward_it(flight_path):
 
 def test_a_trial_that_falls_short_pushes_the_gains_away(flight_path):
     fly = adaptive(flight_path, eta=0.5, sigma=0.2)
-    fly.lengths = [10, 10]
+    fly.records = [10, 10]
     finish_episode_of(fly, 5, [0.0, -0.2, 0.0])
     # dopamine (5 - 10) / 10 = -0.5; step 0.5 * -0.5 * -0.2 / 0.2 = 0.25
     assert fly.log_gains == pytest.approx([0.0, 0.25, 0.0])
@@ -114,7 +114,7 @@ def test_a_trial_that_falls_short_pushes_the_gains_away(flight_path):
 
 def test_the_baseline_is_the_recent_mean_only(flight_path):
     fly = adaptive(flight_path, eta=0.5, sigma=0.2)
-    fly.lengths = [1000] + [10] * 20
+    fly.records = [1000] + [10] * 20
     finish_episode_of(fly, 10, [0.1, 0.1, 0.1])
     assert not fly.log_gains.any()
 
@@ -138,7 +138,7 @@ def test_a_station_keeping_fly_tunes_its_position_gain_too(flight_path):
 
     fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, station_keeping=True)
     assert len(fly.gains) == 4 and fly.gains[3] > 0
-    fly.lengths = [10, 10]
+    fly.records = [10, 10]
     finish_episode_of(fly, 30, [0.0, 0.0, 0.0, 0.1])
     assert fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.5])
 
@@ -158,3 +158,25 @@ def test_a_shuffled_flight_circuit_keeps_roles_degrees_and_couplings(flight_path
     assert np.array_equal(shuffled.role, circuit.role) and np.array_equal(shuffled.pre, circuit.pre)
     assert np.array_equal(shuffled.coupling, circuit.coupling)
     assert np.array_equal(np.bincount(shuffled.post, minlength=9), np.bincount(circuit.post, minlength=9))
+
+
+def test_a_centred_record_judges_an_episode_by_its_time_near_the_landmark(flight_path):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    fly = AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2,
+                            station_keeping=True, record="centred")
+    fly.records = [10.0, 10.0]
+    fly.trial = np.array([0.0, 0.0, 0.0, 0.1])
+    for _ in range(30):
+        fly.act(np.array([1.2, 0.0, 0.0, 0.0]))  # halfway to the track's edge: half a step's credit
+    fly.reset_episode()
+    # score 30 * 0.5 = 15; dopamine (15 - 10) / 10 = 0.5; step 0.5 * 0.5 * 0.1 / 0.2 = 0.125
+    assert fly.records[-1] == pytest.approx(15.0) and fly.log_gains == pytest.approx([0.0, 0.0, 0.0, 0.125])
+
+
+def test_episodes_are_judged_by_length_unless_asked_otherwise(flight_path):
+    fly = adaptive(flight_path)
+    for _ in range(7):
+        fly.act(np.array([1.2, 0.0, 0.0, 0.0]))
+    fly.reset_episode()
+    assert fly.records == [7]

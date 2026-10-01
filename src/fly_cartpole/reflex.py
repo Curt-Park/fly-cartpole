@@ -19,6 +19,8 @@ SENSES = ("angle", "rate", "drift", "position")
 X, X_DOT, ANGLE, ANGLE_DOT = 0, 1, 2, 3
 WIRING_ONLY = (1.0, 1.0, 1.0, 0.0)
 WITH_LANDMARK = (1.0, 1.0, 1.0, 1.0)
+# What an episode is judged by: how long the pole stayed up, or how long the cart stayed near the landmark.
+RECORDS = ("length", "centred")
 
 
 @dataclass(frozen=True)
@@ -118,7 +120,11 @@ class AdaptiveReflexFly(ReflexFly):
     """Tries slightly different sensor gains each episode and keeps changes that beat its recent record."""
 
     def __init__(self, circuit: FlightCircuit, rng: np.random.Generator, eta: float, sigma: float,
-                 baseline_window: int = 20, substeps: int = 4, leak: float = 0.5, station_keeping: bool = False) -> None:
+                 baseline_window: int = 20, substeps: int = 4, leak: float = 0.5, station_keeping: bool = False,
+                 record: str = "length") -> None:
+        if record not in RECORDS:
+            raise ValueError(f"record must be one of {RECORDS}, got {record!r}")
+        self.record = record
         self.rng = rng
         self.eta = eta
         self.sigma = sigma
@@ -127,8 +133,9 @@ class AdaptiveReflexFly(ReflexFly):
         self.adapted = len(SENSES) if station_keeping else len(SENSES) - 1
         self.log_gains = np.zeros(self.adapted)
         self.trial = np.zeros(self.adapted)
-        self.lengths: list[int] = []
+        self.records: list[float] = []
         self.steps = 0
+        self.score = 0.0
         super().__init__(circuit, WIRING_ONLY, substeps, leak)
 
     def gains_from(self, log_gains: np.ndarray) -> tuple[float, ...]:
@@ -137,22 +144,25 @@ class AdaptiveReflexFly(ReflexFly):
     def tuned_gains(self) -> tuple[float, ...]:
         return self.gains_from(self.log_gains)
 
-    def finish_episode(self, length: int) -> None:
-        if self.lengths:
-            baseline = float(np.mean(self.lengths[-self.baseline_window:]))
+    def finish_episode(self, record: float) -> None:
+        if self.records:
+            baseline = float(np.mean(self.records[-self.baseline_window:]))
             # Weight perturbation: only magnitudes adapt, the wiring keeps each pathway's sign.
-            dopamine = (length - baseline) / baseline
+            dopamine = (record - baseline) / baseline
             self.log_gains += self.eta * dopamine * self.trial / self.sigma
-        self.lengths.append(length)
+        self.records.append(record)
 
     def reset_episode(self) -> None:
         if self.steps:
-            self.finish_episode(self.steps)
+            self.finish_episode(self.steps if self.record == "length" else self.score)
         self.steps = 0
+        self.score = 0.0
         self.trial = self.rng.normal(0.0, self.sigma, self.adapted)
         self.gains = self.gains_from(self.log_gains + self.trial)
         super().reset_episode()
 
     def act(self, state: np.ndarray) -> ReflexDecision:
         self.steps += 1
+        # Time near the landmark keeps rewarding station keeping once every episode reaches the cap.
+        self.score += 1.0 - min(abs(state[X]) / STATE_LIMITS[X], 1.0)
         return super().act(state)

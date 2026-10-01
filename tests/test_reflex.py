@@ -114,3 +114,13 @@ def test_every_episode_tries_new_positive_gains_around_the_learned_ones(flight_p
     fly.reset_episode()
     assert fly.trial.any()
     assert np.allclose(fly.gains, np.exp(fly.log_gains + fly.trial)) and min(fly.gains) > 0
+
+
+def test_a_shuffled_flight_circuit_keeps_roles_degrees_and_couplings(flight_path):
+    from fly_cartpole.reflex import shuffle_flight
+
+    circuit = load_flight(flight_path)
+    shuffled = shuffle_flight(circuit, np.random.default_rng(0))
+    assert np.array_equal(shuffled.role, circuit.role) and np.array_equal(shuffled.pre, circuit.pre)
+    assert np.array_equal(shuffled.coupling, circuit.coupling)
+    assert np.array_equal(np.bincount(shuffled.post, minlength=9), np.bincount(circuit.post, minlength=9))

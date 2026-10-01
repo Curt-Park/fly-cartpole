@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import NamedTuple
 
 import numpy as np
 
+from .circuit import shuffle_edges
 from .encoder import STATE_LIMITS
 from .flight import ROLES
 from .paths import FLIGHT_PATH
@@ -45,6 +46,11 @@ def load_flight(path: Path = FLIGHT_PATH) -> FlightCircuit:
             pre=arrays["pre"].astype(np.int64), post=arrays["post"].astype(np.int64),
             coupling=arrays["coupling"].astype(np.float64),
         )
+
+
+def shuffle_flight(circuit: FlightCircuit, rng: np.random.Generator) -> FlightCircuit:
+    # Sensors and motors keep their identities; each connection keeps its coupling but may change target.
+    return replace(circuit, post=shuffle_edges(circuit.pre, circuit.post, rng))
 
 
 def sensor_drive(circuit: FlightCircuit, state: np.ndarray, gains: tuple[float, float, float]) -> np.ndarray:

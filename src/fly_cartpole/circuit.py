@@ -78,6 +78,22 @@ def shuffle_bipartite(matrix: np.ndarray, rng: np.random.Generator, swaps_per_ed
     return shuffled
 
 
+def shuffle_edges(pre: np.ndarray, post: np.ndarray, rng: np.random.Generator, swaps_per_edge: int = 10) -> np.ndarray:
+    """Degree-preserving double-edge swaps on a directed graph; returns new targets, never self or duplicate connections."""
+    targets = post.copy()
+    occupied = set(zip(pre.tolist(), targets.tolist()))
+    for first, second in rng.integers(len(pre), size=(swaps_per_edge * len(pre), 2)).tolist():
+        source_a, target_a, source_b, target_b = int(pre[first]), int(targets[first]), int(pre[second]), int(targets[second])
+        if source_a == source_b or target_a == target_b or source_a == target_b or source_b == target_a:
+            continue
+        if (source_a, target_b) in occupied or (source_b, target_a) in occupied:
+            continue
+        occupied.difference_update({(source_a, target_a), (source_b, target_b)})
+        occupied.update({(source_a, target_b), (source_b, target_a)})
+        targets[first], targets[second] = target_b, target_a
+    return targets
+
+
 def shuffle_circuit(circuit: Circuit, rng: np.random.Generator) -> Circuit:
     # DAN->MBON stays intact: it defines what dopamine is able to change.
     return replace(

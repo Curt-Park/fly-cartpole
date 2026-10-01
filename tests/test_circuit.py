@@ -35,3 +35,20 @@ def test_shuffle_circuit_leaves_dopamine_wiring_alone(circuit_path):
     assert np.array_equal(shuffled.dan_mbon, circuit.dan_mbon)
     assert not np.array_equal(shuffled.pn_kc, circuit.pn_kc)
     assert not np.array_equal(shuffled.kc_mbon, circuit.kc_mbon)
+
+
+def test_shuffle_edges_keeps_degrees_without_self_or_duplicate_connections():
+    from fly_cartpole.circuit import shuffle_edges
+
+    rng = np.random.default_rng(0)
+    pairs = set()
+    while len(pairs) < 200:
+        source, target = rng.integers(40, size=2).tolist()
+        if source != target:
+            pairs.add((source, target))
+    pre, post = (np.array(column) for column in zip(*sorted(pairs)))
+    shuffled = shuffle_edges(pre, post, np.random.default_rng(1))
+    assert np.array_equal(np.bincount(shuffled, minlength=40), np.bincount(post, minlength=40))
+    assert not (pre == shuffled).any()
+    assert len(set(zip(pre.tolist(), shuffled.tolist()))) == len(pre)
+    assert (shuffled != post).mean() > 0.5

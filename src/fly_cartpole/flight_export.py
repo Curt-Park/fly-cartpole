@@ -12,8 +12,8 @@ from .dopamine import DopamineSchedule
 from .encoder import STATE_LIMITS
 from .flight import ROLES
 from .paths import FLIGHT_PATH, WEB_DATA_DIR
-from .reflex import WIRING_ONLY, FlightCircuit, ReflexFly, load_flight, relative_gains
-from .reflex_report import ReflexParameters, make_reflex_agent
+from .reflex import WITH_LANDMARK, FlightCircuit, ReflexFly, load_flight, relative_gains
+from .reflex_report import STATION, ReflexParameters, make_reflex_agent
 from .run import run_episodes
 
 
@@ -81,13 +81,10 @@ def write_json(path: Path, payload: dict) -> None:
 
 def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH, web_data_dir: Path = WEB_DATA_DIR) -> dict:
     circuit = load_flight(flight_path)
-    tuned = {}
-    for condition in ("fly-reflex-adaptive", "fly-reflex-station"):
-        fly = make_reflex_agent(condition, circuit, params, seed)
-        lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), params.adapt_episodes, seed)
-        tuned[condition] = (relative_gains(fly.log_gains), lengths)
-    gains_adapted, lengths = tuned["fly-reflex-adaptive"]
-    gains_station, station_lengths = tuned["fly-reflex-station"]
+    # The landmark fly is the reference: both settings the viewer offers see the landmark.
+    fly = make_reflex_agent(STATION, circuit, params, seed)
+    lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), params.adapt_episodes, seed)
+    gains_tuned = relative_gains(fly.log_gains)
     write_json(web_data_dir / "flight.json", {
         "roles": list(ROLES),
         "role": circuit.role.tolist(),
@@ -100,10 +97,9 @@ def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGH
         "state_limits": STATE_LIMITS.tolist(),
         "leak": params.leak,
         "substeps": params.substeps,
-        "gains_fixed": list(WIRING_ONLY),
-        "gains_adapted": gains_adapted,
-        "gains_station": gains_station,
-        "trajectory": reflex_trajectory(circuit, gains_station, params, seed),
+        "gains_fixed": list(WITH_LANDMARK),
+        "gains_tuned": gains_tuned,
+        "trajectory": reflex_trajectory(circuit, gains_tuned, params, seed),
         "physics": physics_check(seed),
     })
     return {
@@ -111,7 +107,5 @@ def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGH
         "adaptation_episodes": params.adapt_episodes,
         "final_100_mean": float(np.mean(lengths[-100:])),
         "longest": max(lengths),
-        "gains_adapted": gains_adapted,
-        "station_final_100_mean": float(np.mean(station_lengths[-100:])),
-        "gains_station": gains_station,
+        "gains_tuned": gains_tuned,
     }

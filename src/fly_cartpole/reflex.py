@@ -18,6 +18,7 @@ from .paths import FLIGHT_PATH
 SENSES = ("angle", "rate", "drift", "position")
 X, X_DOT, ANGLE, ANGLE_DOT = 0, 1, 2, 3
 WIRING_ONLY = (1.0, 1.0, 1.0, 0.0)
+WITH_LANDMARK = (1.0, 1.0, 1.0, 1.0)
 
 
 @dataclass(frozen=True)

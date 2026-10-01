@@ -100,14 +100,12 @@ function drawCartPole([x, , theta], action, done) {
   context.moveTo(40, groundY);
   context.lineTo(width - 40, groundY);
   context.stroke();
-  if (gains[3] > 0) {
-    // The landmark the fly holds station on: a vertical stripe above the track's centre.
-    context.fillStyle = "#383835";
-    context.fillRect(width / 2 - 4, 24, 8, groundY - 140);
-    context.fillStyle = "#898781";
-    context.font = "12px system-ui, sans-serif";
-    context.fillText("landmark", width / 2 + 10, 36);
-  }
+  // The landmark the fly holds station on: a vertical stripe above the track's centre.
+  context.fillStyle = "#383835";
+  context.fillRect(width / 2 - 4, 24, 8, groundY - 140);
+  context.fillStyle = "#898781";
+  context.font = "12px system-ui, sans-serif";
+  context.fillText("landmark", width / 2 + 10, 36);
   context.fillStyle = "#c3c2b7";
   context.fillRect(cartX - 36, groundY - 22, 72, 22);
   context.strokeStyle = done && Math.abs(theta) > ANGLE_LIMIT ? "#fab219" : "#ffffff";
@@ -128,7 +126,7 @@ const elements = Object.fromEntries(
     .map((id) => [id, document.getElementById(id)]),
 );
 const lengths = [];
-const GAIN_SETS = { fixed: model.gains_fixed, adapted: model.gains_adapted, station: model.gains_station };
+const GAIN_SETS = { fixed: model.gains_fixed, tuned: model.gains_tuned };
 let gains = GAIN_SETS[elements.gains.value];
 let state;
 let steps;
@@ -196,7 +194,7 @@ function tick(now) {
   }
   if (playing && !done) flapPhase += ((now - lastFrame) / 1000) * 2 * Math.PI * FLAPS_PER_SECOND;
   lastFrame = now;
-  flyView.draw(state, gains, flapPhase);
+  flyView.draw(state, flapPhase);
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(tick);

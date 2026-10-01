@@ -13,23 +13,32 @@ import numpy as np
 
 from .dopamine import DopamineSchedule
 from .paths import FLIGHT_PATH, REFLEX_RESULTS_DIR, STATION_RESULTS_DIR
-from .reflex import (SENSES, WIRING_ONLY, AdaptiveReflexFly, FlightCircuit, ReflexDecision, ReflexFly, load_flight,
+from .reflex import (SENSES, WIRING_ONLY, WITH_LANDMARK, AdaptiveReflexFly, FlightCircuit, ReflexDecision, ReflexFly, load_flight,
                      relative_gains, shuffle_flight)
 from .report import FINAL_WINDOW, REFERENCE_COLOUR, final_means, moving_average, permutation_test, summarise
-from .run import run_episodes, save_lengths
+from .run import load_lengths, run_episodes, save_lengths
 
 REFLEX_CONDITIONS = ("fly-reflex", "fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", "random")
 STATION = "fly-reflex-station"
+STATION_FIXED = "fly-reflex-station-fixed"
 ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION)
-STATION_CONDITIONS = ("fly-reflex-adaptive", STATION)
+STATION_CONDITIONS = (STATION_FIXED, "fly-reflex-adaptive", STATION)
 REFLEX_CLAIMS = (
     ("reflex beats chance", "fly-reflex", "random", "greater"),
     ("self-tuning helps", "fly-reflex-adaptive", "fly-reflex", "greater"),
     ("wiring contributes", "fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", "greater"),
 )
-STATION_CLAIMS = (("position helps within the 500-step cap", STATION, "fly-reflex-adaptive", "greater"),)
+STATION_CLAIMS = (
+    ("position helps within the 500-step cap", STATION, "fly-reflex-adaptive", "greater"),
+    ("self-tuning helps with a landmark", STATION, STATION_FIXED, "greater"),
+)
+HELD_CLAIMS = (
+    ("position holds the pole longer", STATION, "fly-reflex-adaptive", "length"),
+    ("position keeps the cart near the centre", STATION, "fly-reflex-adaptive", "offset"),
+    ("self-tuning holds the pole longer with a landmark", STATION, STATION_FIXED, "length"),
+)
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
-           STATION: "#1baf7a"}
+           STATION: "#1baf7a", STATION_FIXED: "#1baf7a"}
 PARAMETERS_FILE = "hyperparameters.json"
 
 
@@ -79,13 +88,16 @@ def episodes_for(condition: str, params: ReflexParameters) -> int:
 
 
 def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexParameters, seed: int):
-    if condition not in REFLEX_CONDITIONS + (STATION,):
-        raise ValueError(f"condition must be one of {REFLEX_CONDITIONS + (STATION,)}, got {condition!r}")
+    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED)
+    if condition not in known:
+        raise ValueError(f"condition must be one of {known}, got {condition!r}")
     rng = np.random.default_rng(seed)
     if condition == "random":
         return RandomPusher(rng)
     if condition == "fly-reflex":
         return ReflexFly(circuit, WIRING_ONLY, params.substeps, params.leak)
+    if condition == STATION_FIXED:
+        return ReflexFly(circuit, WITH_LANDMARK, params.substeps, params.leak)
     if condition == "fly-reflex-adaptive-shuffled":
         circuit = shuffle_flight(circuit, rng)
     return AdaptiveReflexFly(circuit, rng, params.eta, params.sigma, params.baseline_window, params.substeps, params.leak,
@@ -144,7 +156,7 @@ def plot_reflex(results: dict[str, dict[int, list[int]]], params: ReflexParamete
         else:
             # Without learning, every episode is drawn from the same reflex: a flat reference.
             level = final_means(by_seed).mean()
-            colour, label = (REFERENCE_COLOUR, "random (chance)") if condition == "random" else (COLOURS[condition], "fly-reflex (fixed gains)")
+            colour, label = (REFERENCE_COLOUR, "random (chance)") if condition == "random" else (COLOURS[condition], f"{condition} (fixed gains)")
             axis.axhline(level, color=colour, linewidth=2 if condition != "random" else 1.5,
                          linestyle="--" if condition == "random" else ":", label=label)
     axis.set_ylim(0, 510)
@@ -210,15 +222,16 @@ def run_station_condition(condition: str, seed: int, params: ReflexParameters, f
                           long_episodes: int = LONG_EPISODES, long_steps: int = LONG_STEPS) -> dict:
     circuit = load_flight(flight_path)
     fly = make_reflex_agent(condition, circuit, params, seed)
-    lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), params.adapt_episodes, seed)
-    held = hold_station(circuit, fly.tuned_gains(), params, seed, long_episodes, long_steps)
-    return {"adaptation": lengths, "gains": relative_gains(fly.log_gains), **held}
+    lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), episodes_for(condition, params), seed)
+    adapted = isinstance(fly, AdaptiveReflexFly)
+    held = hold_station(circuit, fly.tuned_gains() if adapted else fly.gains, params, seed, long_episodes, long_steps)
+    return {"episodes": lengths, "gains": relative_gains(fly.log_gains) if adapted else list(fly.gains), **held}
 
 
 def station_compare(seeds: list[int], workers: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH,
                     results_dir: Path = STATION_RESULTS_DIR, long_episodes: int = LONG_EPISODES,
-                    long_steps: int = LONG_STEPS) -> str:
-    jobs = [(condition, seed) for condition in STATION_CONDITIONS for seed in seeds]
+                    long_steps: int = LONG_STEPS, conditions: tuple[str, ...] = STATION_CONDITIONS) -> str:
+    jobs = [(condition, seed) for condition in conditions for seed in seeds]
     if workers <= 1:
         outcomes = [run_station_condition(condition, seed, params, flight_path, long_episodes, long_steps) for condition, seed in jobs]
     else:
@@ -226,13 +239,16 @@ def station_compare(seeds: list[int], workers: int, params: ReflexParameters, fl
             futures = [pool.submit(run_station_condition, condition, seed, params, flight_path, long_episodes, long_steps)
                        for condition, seed in jobs]
             outcomes = [future.result() for future in futures]
-    results: dict[str, dict[int, list[int]]] = {condition: {} for condition in STATION_CONDITIONS}
-    held: dict[str, dict[str, dict]] = {condition: {} for condition in STATION_CONDITIONS}
+    held_path = results_dir / "station.json"
+    # Conditions run earlier on the same seeds stay in the comparison.
+    held: dict[str, dict[str, dict]] = json.loads(held_path.read_text()) if held_path.exists() else {}
     for (condition, seed), outcome in zip(jobs, outcomes):
-        results[condition][seed] = outcome.pop("adaptation")
-        save_lengths(condition, seed, results[condition][seed], params, results_dir)
-        held[condition][str(seed)] = outcome
-    (results_dir / "station.json").write_text(json.dumps(held, indent=1) + "\n")
+        save_lengths(condition, seed, outcome.pop("episodes"), params, results_dir)
+        held.setdefault(condition, {})[str(seed)] = outcome
+    held_path.write_text(json.dumps(held, indent=1) + "\n")
+    ordered = [condition for condition in STATION_CONDITIONS if condition in held]
+    results = {condition: load_lengths(condition, results_dir) for condition in ordered}
+    held = {condition: held[condition] for condition in ordered}
     plot_reflex(results, params, results_dir / "learning_curves.png")
     summary = summarise(results, np.random.default_rng(0), STATION_CLAIMS) + held_summary(held, long_episodes, long_steps)
     (results_dir / "summary.md").write_text(summary)
@@ -255,19 +271,17 @@ def held_summary(held: dict[str, dict[str, dict]], long_episodes: int, long_step
         offsets = np.array([outcome["mean_offset"] for outcome in by_seed.values()])
         exits = sum(outcome["exits"] for outcome in by_seed.values()) / (long_episodes * len(by_seed))
         gains = np.median([np.array(outcome["gains"]) / outcome["gains"][0] for outcome in by_seed.values()], axis=0)
-        per_seed[condition] = (lengths, offsets)
+        per_seed[condition] = {"length": lengths, "offset": offsets}
         lines.append(f"| {condition} | {lengths.mean():.0f} ± {lengths.std():.0f} | {exits:.0%} | "
                      f"{offsets.mean():.2f} ± {offsets.std():.2f} | {', '.join(f'{gain:.2f}' for gain in gains)} |")
     rng = np.random.default_rng(1)
-    station_lengths, station_offsets = per_seed[STATION]
-    adaptive_lengths, adaptive_offsets = per_seed["fly-reflex-adaptive"]
-    lines += [
-        "",
-        "| claim | comparison | permutation p |",
-        "|---|---|---|",
-        f"| position holds the pole longer | {STATION} vs fly-reflex-adaptive, long-episode length (greater) | "
-        f"{permutation_test(station_lengths, adaptive_lengths, rng):.4f} |",
-        f"| position keeps the cart near the centre | fly-reflex-adaptive vs {STATION}, distance from centre (greater) | "
-        f"{permutation_test(adaptive_offsets, station_offsets, rng):.4f} |",
-    ]
+    lines += ["", "| claim | comparison | permutation p |", "|---|---|---|"]
+    for claim, better, worse, measure in HELD_CLAIMS:
+        if better not in per_seed or worse not in per_seed:
+            continue
+        if measure == "length":
+            p_value, compared = permutation_test(per_seed[better]["length"], per_seed[worse]["length"], rng), "long-episode length (greater)"
+        else:
+            p_value, compared = permutation_test(per_seed[worse]["offset"], per_seed[better]["offset"], rng), "distance from centre (smaller)"
+        lines.append(f"| {claim} | {better} vs {worse}, {compared} | {p_value:.4f} |")
     return "\n".join(lines) + "\n"

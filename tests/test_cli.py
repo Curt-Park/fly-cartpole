@@ -37,6 +37,7 @@ def test_station_compare_defaults_to_fresh_seeds_and_its_own_results():
 
     args = build_parser().parse_args(["station-compare"])
     assert (args.seeds, args.results) == ("180-199", STATION_RESULTS_DIR)
+    assert args.conditions == "fly-reflex-station-fixed,fly-reflex-adaptive,fly-reflex-station"
 
 
 def test_the_viewer_is_exported_from_the_reflex_fly():

@@ -39,7 +39,7 @@ export function createFlyView(canvas, model) {
     }
   }
 
-  function draw([x, , theta], gains, phase) {
+  function draw([x, , theta], phase) {
     const { width, height } = canvas;
     const horizon = height * 0.72;
     const metres = (width - 80) / (2 * TRACK_LIMIT);
@@ -67,12 +67,10 @@ export function createFlyView(canvas, model) {
       context.fillRect(edgeX - 1, horizon - 40, 2, height - horizon + 40);
       context.fillText("track edge", edgeX + (edge < 0 ? 6 : -68), horizon - 46);
     }
-    if (gains[3] > 0) {
-      context.fillStyle = "#383835";
-      context.fillRect(screenX(0) - 5, 16, 10, horizon - 16);
-      context.fillStyle = "#898781";
-      context.fillText("landmark", screenX(0) + 10, 28);
-    }
+    context.fillStyle = "#383835";
+    context.fillRect(screenX(0) - 5, 16, 10, horizon - 16);
+    context.fillStyle = "#898781";
+    context.fillText("landmark", screenX(0) + 10, 28);
     context.fillText("the fly, seen from behind", 12, 20);
 
     context.save();

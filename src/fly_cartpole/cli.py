@@ -56,6 +56,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     station = commands.add_parser("station-compare", help="the self-tuned reflex fly with and without a landmark, on fresh seeds")
     station.add_argument("--seeds", default="180-199")
+    station.add_argument("--conditions", default="fly-reflex-station-fixed,fly-reflex-adaptive,fly-reflex-station")
     station.add_argument("--workers", type=int, default=os.cpu_count() or 1)
     station.add_argument("--flight", type=Path, default=FLIGHT_PATH)
     # The self-tuning rates come from reflex-tune; nothing is re-tuned for the landmark.
@@ -110,7 +111,8 @@ def main(argv: list[str] | None = None) -> None:
         from .reflex_report import PARAMETERS_FILE, load_reflex_parameters, station_compare
 
         params = load_reflex_parameters(args.reflex_results / PARAMETERS_FILE)
-        print(station_compare(parse_seeds(args.seeds), args.workers, params, args.flight, args.results))
+        print(station_compare(parse_seeds(args.seeds), args.workers, params, args.flight, args.results,
+                              conditions=tuple(args.conditions.split(","))))
         return
 
     if args.command in ("reflex-tune", "reflex-compare"):

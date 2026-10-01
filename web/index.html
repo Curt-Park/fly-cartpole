@@ -52,7 +52,7 @@
 <body>
 <header>
   <h1>fly-cartpole</h1>
-  <p>The circuit a fruit fly uses to stay upright in flight, wired from the MaleCNS connectome, balances a pole as a reflex: no synapse changes. Every episode starts from a random state, and every neuron of the circuit is simulated live in your browser.</p>
+  <p>The circuit a fruit fly uses to stay upright in flight, wired from the MaleCNS connectome, balances a pole as a reflex, holding its place against a landmark: no synapse changes. Every episode starts from a random state, and every neuron of the circuit is simulated live in your browser.</p>
 </header>
 <main>
   <div class="column">
@@ -79,7 +79,7 @@
       <li style="--swatch: var(--interneuron)">interneurons</li>
       <li style="--swatch: var(--wing-motor)">wing steering motor neurons</li>
     </ul>
-    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions. Haltere afferents, whose cell bodies sit in the halteres, and the few other neurons without a recorded position are drawn at the mean cell-body position of the neurons they synapse onto. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. With a landmark, the fly also sees where the cart is against a stripe above the track's centre, and that shifts the tilt it holds: to slide back it first banks toward the stripe. Only the ratios of the sensor gains matter, so they are shown with a geometric mean of 1. Nothing learns while you watch. Drag to rotate.</p>
+    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions. Haltere afferents, whose cell bodies sit in the halteres, and the few other neurons without a recorded position are drawn at the mean cell-body position of the neurons they synapse onto. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. The fly also sees where the cart is against a landmark, a stripe above the track's centre, and that shifts the tilt it holds: to slide back it first banks toward the stripe. Only the ratios of the sensor gains matter, so they are shown with a geometric mean of 1. Nothing learns while you watch. Drag to rotate.</p>
   </section>
 </main>
 <footer>
@@ -90,8 +90,7 @@
     <option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
   </select></label>
   <label>gains <select id="gains">
-    <option value="fixed">fixed (wiring only)</option><option value="adapted" selected>self-tuned</option>
-    <option value="station">self-tuned, with a landmark</option>
+    <option value="fixed">fixed (every gain 1)</option><option value="tuned" selected>self-tuned</option>
   </select></label>
 </footer>
 <script type="module" src="app.js"></script>

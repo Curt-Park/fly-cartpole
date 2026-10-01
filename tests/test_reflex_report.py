@@ -52,7 +52,8 @@ def test_station_compare_writes_lengths_long_episodes_and_the_claims(flight_path
     for text in ("position helps within the 500-step cap", "fly-reflex-station", "track exits"):
         assert text in summary
     stored = json.loads((tmp_path / "station.json").read_text())
-    assert set(stored) == {"fly-reflex-adaptive", "fly-reflex-station"} and len(stored["fly-reflex-station"]["1"]["gains"]) == 4
+    assert set(stored) == {"fly-reflex-station-fixed", "fly-reflex-adaptive", "fly-reflex-station"}
+    assert len(stored["fly-reflex-station"]["1"]["gains"]) == 4 and stored["fly-reflex-station-fixed"]["1"]["gains"] == [1.0] * 4
     assert (tmp_path / "fly-reflex-station" / "seed_1.json").exists()
 
 
@@ -83,3 +84,17 @@ def test_the_long_episode_claims_favour_the_fly_that_holds_station():
     assert claims["position holds the pole longer"] < 0.05 and claims["position keeps the cart near the centre"] < 0.05
     # Gains are shown relative to the ocelli, so rows that tune different senses stay comparable.
     assert any("1.00, 0.25, 0.50, 0.00" in line for line in lines) and any("1.00, 0.25, 0.25, 0.06" in line for line in lines)
+
+
+def test_the_fixed_landmark_fly_runs_without_adapting(flight_path):
+    lengths = run_reflex_condition("fly-reflex-station-fixed", seed=0, params=QUICK, flight_path=flight_path)
+    assert len(lengths) == QUICK.fixed_episodes
+
+
+def test_station_compare_adds_conditions_to_earlier_results(flight_path, tmp_path):
+    options = dict(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path, long_episodes=2, long_steps=50)
+    station_compare(conditions=("fly-reflex-adaptive", "fly-reflex-station"), **options)
+    summary = station_compare(conditions=("fly-reflex-station-fixed",), **options)
+    assert set(json.loads((tmp_path / "station.json").read_text())) == {"fly-reflex-adaptive", "fly-reflex-station", "fly-reflex-station-fixed"}
+    for text in ("fly-reflex-adaptive", "fly-reflex-station-fixed", "self-tuning helps with a landmark"):
+        assert text in summary

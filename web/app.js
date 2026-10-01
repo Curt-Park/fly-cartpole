@@ -117,7 +117,8 @@ const elements = Object.fromEntries(
     .map((id) => [id, document.getElementById(id)]),
 );
 const lengths = [];
-let gains = model.gains_fixed;
+const GAIN_SETS = { fixed: model.gains_fixed, adapted: model.gains_adapted };
+let gains = GAIN_SETS[elements.gains.value];
 let state;
 let steps;
 let latest;
@@ -190,7 +191,7 @@ elements.play.addEventListener("click", () => {
 });
 elements.restart.addEventListener("click", newEpisode);
 elements.gains.addEventListener("change", () => {
-  gains = elements.gains.value === "adapted" ? model.gains_adapted : model.gains_fixed;
+  gains = GAIN_SETS[elements.gains.value];
   lengths.length = 0;
   newEpisode();
 });

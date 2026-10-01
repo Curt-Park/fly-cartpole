@@ -6,14 +6,138 @@
 
 **English** · [한국어](README.ko.md)
 
-Two fruit fly mushroom bodies, wired synapse by synapse from the
-[MaleCNS v1.0](https://male-cns.janelia.org/) connectome, learn to balance Gymnasium's
-CartPole with dopamine-gated plasticity. A web viewer runs the trained fly live in the
-browser and shows which mushroom body neurons light up while it balances the pole.
+Two circuits of the fruit fly brain, wired synapse by synapse from the
+[MaleCNS v1.0](https://male-cns.janelia.org/) connectome, balance Gymnasium's CartPole. The
+circuit a fly uses to stay upright in flight does it as a reflex: no synapse changes, and once
+the fly has tuned how strongly it listens to each of its senses, it holds the pole for the full
+500 steps in 99.85% of its final episodes. The two mushroom bodies, the fly's learning centre,
+learn the task with dopamine-gated plasticity and reach 392.5 steps on average. A web viewer runs
+the reflex fly live in the browser and shows its flight circuit at work.
 
-![The web viewer: the cart and pole, both sides' values and the dopamine signal on the left; both mushroom bodies at their MaleCNS cell-body positions on the right](assets/viewer.png)
+![The web viewer: the cart and pole, the steering signal and the sensor gains on the left; the flight circuit at its MaleCNS cell-body positions on the right](assets/viewer.png)
 
-## Result
+## Reflex fly
+
+### Result
+
+**The circuit a fly uses to stay upright in flight, wired as measured, balances the pole as a
+reflex, and once the fly has tuned its own sensor gains it holds the pole for the full 500
+steps.** With every sensor gain fixed at 1 it lasts 275.6 steps on average. It does not drop the
+pole: in the first episode of each evaluation seed, 14 of 20 episodes ended with the cart leaving
+the track and the other 6 reached the cap. Letting the fly tune how strongly it listens to each of
+its three senses raises the score to **499.9** on 20 evaluation seeds that no earlier run
+touched: 99.85% of its final 100 episodes reach the 500-step cap, and the shortest lasts 401 steps.
+No synapse changes.
+
+![Learning curves of the reflex fly](results/reflex/learning_curves.png)
+
+| condition | what it is | final-100 mean ± std (20 seeds) | episodes reaching 500 |
+|---|---|---|---|
+| `fly-reflex` | the flight circuit as wired, every sensor gain 1 | 275.6 ± 9.4 | 17% |
+| `fly-reflex-adaptive` | the same circuit; the fly tunes its three sensor gains over 600 episodes | **499.9 ± 0.3** | 99.85% |
+| `fly-reflex-adaptive-shuffled` | the same self-tuning on a degree-preserving shuffle of the circuit | 165.9 ± 182.8 | 20% |
+| `random` | uniform random pushes (chance) | 22.1 ± 0.8 | 0% |
+
+Permutation tests on the per-seed final-100 means
+([results/reflex/summary.md](results/reflex/summary.md)): the reflex beats chance, self-tuning
+helps, and the measured wiring contributes (p = 0.0001 each). The self-tuning rates were chosen on
+tuning seeds 100-109 ([results/reflex/tuning.json](results/reflex/tuning.json)); all six
+configurations scored between 479 and 500 there, so the result does not hinge on them. The
+evaluation used seeds 160-179.
+
+**What the measured wiring gets right is the sign.** Each shuffled circuit can be sorted by
+whether its ocellar (angle) and haltere (rate) pathways still reach the wing steering motor
+neurons with the sign that rights the body:
+
+| angle pathway | rate pathway | shuffled circuits | final-100 means after self-tuning |
+|---|---|---|---|
+| corrective | corrective | 4 | 499-500 |
+| reversed | corrective | 5 | 176-196 |
+| corrective | reversed | 4 | 19-214 |
+| reversed | reversed | 7 | 9 (41 once) |
+
+The measured circuit is of the first kind. Self-tuning can scale a pathway but never flip it, so a
+shuffle that keeps both signs does as well as the real circuit, and one that reverses both pushes
+the pole over in 9 steps.
+
+### How it works
+
+**Connectome slice.** `fly-cartpole extract-flight` keeps every neuron on a path of at most three
+connections, each of at least five synapses, from the fly's flight-stabilisation sensors to its
+wing steering motor neurons: 203 haltere afferents (the halteres are the fly's gyroscopes), 22
+ocellar neurons (the ocelli read the horizon), 8 HS cells (wide-field horizontal motion), 5,159
+interneurons in the brain and ventral nerve cord, and 67 wing steering motor neurons; 191,953
+connections in all. Each neuron's sign comes from its predicted transmitter (acetylcholine
+excites; GABA, glutamate and histamine inhibit), and each connection's weight is its synapse count
+divided by the postsynaptic neuron's total annotated input, so every neuron keeps the share of
+input the circuit gives it in the whole nervous system. The slice is committed as
+`data/flight.npz`.
+
+**Senses.** The pole's angle is read as the fly's body roll: the ocelli on the side that tips up
+see more sky. Its angular velocity is read by the halteres: the haltere on the side moving down is
+excited. The cart's velocity is horizontal optic flow on the HS cells. Each sense is scaled by its
+working range (0.21 rad, 3.5 rad/s, 3 m/s), clipped to ±1 and multiplied by its gain.
+
+**Circuit.** Leaky linear rate units, whose activity is the deviation from tonic firing (so
+inhibition is negative activity), run four substeps per CartPole step with leak 0.5 and start from
+rest each episode.
+
+**Steering.** The b1 and b2 motor neurons raise the wing's stroke amplitude. A body rolling right
+is righted by the right wing beating harder, matched here to pushing the cart right: the fly pushes
+right when b1 and b2 are more active on the right than on the left.
+
+**Self-tuning.** Each episode the fly tries slightly different gains, `log g = mu + eps` with
+`eps ~ N(0, 0.3²)`. After the episode, dopamine is the episode's length against the fly's recent
+record, `(length − mean of its last 20) / mean of its last 20`, and the gains move toward trials
+that beat it: `mu += 0.3 · dopamine · eps / 0.3`. Only how strongly each sense drives its sensory
+neurons changes.
+
+**What tuning changes.** The circuit is linear and the fly reads only the sign of its steering
+signal, so scaling all three gains alike changes nothing; only their ratios matter, and the
+viewer shows them with a geometric mean of 1. As wired, a pole falling right moves the steering
+signal about 48 times as much through the halteres as a pole leaning right does through the
+ocelli, and the HS cells barely reach the steering motor neurons (1/24 of the ocelli). Such a
+rate-dominated reflex stops the pole from falling but barely corrects a lean, so the cart drifts
+off the track. On seed 0 the fly settled on relative gains of 5.98 (ocelli), 0.32 (halteres) and 0.53 (HS):
+it now listens to its ocelli about 19 times as strongly as to its halteres, which cuts the
+halteres' lead over the ocelli in the steering signal from about 48 times to about 2.6 times.
+
+### Measured versus invented
+
+- **Measured:** every connection on the paths above and its synapse count; each neuron's predicted
+  transmitter; which neurons are haltere afferents, ocellar neurons, HS cells and wing steering
+  motor neurons; cell-body positions.
+- **Invented or assumed:** the mapping from CartPole to flight (pole angle as body roll, angular
+  velocity as haltere rotation, cart velocity as optic flow); the haltere's sign, the one sign not
+  read from the connectome (it matches the corrective haltere-to-b1 reflex; Dickinson 1999);
+  steering by b1 and b2 and its match to a push; the working ranges used for scaling; linear rate
+  units and their time constants; transmitter signs (glutamate and histamine are treated as
+  inhibitory everywhere); the self-tuning rule and its rates in
+  [results/reflex/hyperparameters.json](results/reflex/hyperparameters.json).
+
+### Where it falls short
+
+- The fly has no sense of where the cart is, so nothing pulls the cart back to the centre. The
+  self-tuned fly stays on the track for 500 steps, but nothing here shows that it holds its place
+  beyond the cap.
+- The connectome records chemical synapses only, while in the blowfly the haltere afferents reach
+  the b1 motor neuron through electrical synapses as well (Fayyazuddin and Dickinson 1996).
+- The shuffle moves connections together with their weights, so a shuffled neuron can receive up
+  to 5.7 times the input scale of any real neuron (0.98). Its dynamics stay stable, but "wiring
+  contributes" compares topology and input scale together. The self-tuning rates were chosen on
+  the real circuit and reused for the shuffle.
+- One linear rate model; no spikes, no neuromodulation of the flight circuit, no head or neck
+  movements.
+- The probes that set the haltere sign and the sensor scaling ran on seeds 100-159 and 500-519;
+  tuning used seeds 100-109 and evaluation seeds 160-179.
+
+## Mushroom body fly
+
+The first fly in this repository learns. Its two mushroom bodies, the fly's learning centre,
+learn to balance the pole with dopamine-gated plasticity. Its live viewer was replaced by the
+reflex fly's and remains in the git history at commit `bd43325`.
+
+### Result
 
 **The fly learns to balance the pole, and runs the full 500 steps in almost half of its final
 episodes.** With its innate wiring it drops the pole after about 19 steps
@@ -50,7 +174,7 @@ Permutation tests on the per-seed final-100 means (every condition and test is i
 Hyperparameters were searched on tuning seeds 100-139 only and applied unchanged to the
 evaluation seeds 70-89 ([results/tuning.json](results/tuning.json)).
 
-## How we got there
+### How we got there
 
 The first design followed [fly-blackjack](https://github.com/WilliamJones/fly-blackjack)
 closely and stayed at chance. Each row below is one hypothesis, tested on tuning seeds
@@ -103,7 +227,7 @@ discount (187 at γ = 0.95), but at the tuned discount (γ = 0.99) it collapsed 
 five tuning seeds (91). A record that moves more slowly, or a fixed reward for every step
 survived, also did worse (hypothesis 16).
 
-### Aiming for 500
+#### Aiming for 500
 
 Once the fly passed 195, the goal was raised to the 500-step cap. A diagnostic showed where the
 trained fly failed: 58% of its episodes ended with the cart leaving the track rather than the
@@ -144,7 +268,7 @@ forty-seed tuned fly after 1,000 episodes (191.7), and seeds 50-69 the fly after
 (233.8), which met the first goal of 195. The numbers at the top come from seeds 70-89, which no
 earlier experiment touched.
 
-## How it works
+### How it works
 
 **Connectome slice.** `fly-cartpole extract` downloads the official MaleCNS v1.0 flat
 connectome and keeps both mushroom bodies. Right: 343 antennal lobe projection neurons (PN),
@@ -189,7 +313,7 @@ depresses traced synapses in the compartments it reaches (Hige et al. 2015; Hand
 2019), and the opposing dopamine population restores traced synapses in its own
 compartments. The learning rate settles with experience, as `0.05 / (1 + episode / 1000)`.
 
-## Measured versus invented
+### Measured versus invented
 
 - **Measured:** every PN→KC, KC→MBON, DAN→MBON and MBON→DAN connection and its synapse
   count; which dopamine population dominates each MBON; cell-body positions.
@@ -200,38 +324,7 @@ compartments. The learning rate settles with experience, as `0.05 / (1 + episode
   the hyperparameters in
   [results/hyperparameters.json](results/hyperparameters.json).
 
-## Viewer
-
-```bash
-python3 -m http.server -d web   # then open http://localhost:8000
-```
-
-The viewer runs one trained fly live: seed 0, the default rather than a seed picked for looks,
-after 3,000 episodes. It averaged 185 steps over its last 100 training episodes, well below
-the evaluation median of 425, and its longest run reached the 500-step cap. Every episode starts from a random state, and the fly's
-choices are computed in the browser from the exported synapse gains (a test checks them
-against the Python model to 1e-9). Left: the cart, both sides' values and the dopamine
-signal. Right: both mushroom bodies at their MaleCNS cell-body positions; PNs (blue) follow
-the glomerulus code, active KCs light up (the chosen side brightest), MBONs (magenta)
-brighten with their output, and PAM (green, ▲ better than expected) and PPL1 (amber,
-✕ worse than expected) flash with the prediction error. Switch the brain to "before
-learning" to watch the naive fly fail. Cell bodies sit at the brain surface, so a dot
-identifies a neuron, not where its synapses compute.
-
-## Run it
-
-```bash
-uv sync
-uv run fly-cartpole extract    # 1.1 GB download once; data/*.npz are already committed
-uv run fly-cartpole tune       # searches on tuning seeds 100-139
-uv run fly-cartpole compare    # every condition on seeds 70-89, writes results/
-uv run fly-cartpole export     # trains the fly on seed 0 and writes web/data/ for the viewer
-uv run pytest
-```
-
-On 12 CPU cores `tune` takes about 2 hours 40 minutes and `compare` about 1 hour 35 minutes.
-
-## Limitations
+### Limitations
 
 - Only the mushroom bodies are simulated; nothing else in the brain is computed or drawn.
 - Rate units, no spikes, no APL, KC→KC or MBON→MBON connections.
@@ -250,6 +343,42 @@ On 12 CPU cores `tune` takes about 2 hours 40 minutes and `compare` about 1 hour
   assignment, shared by every condition of that seed, so the spread across seeds mixes that
   assignment with learning noise.
 
+## Viewer
+
+```bash
+python3 -m http.server -d web   # then open http://localhost:8000
+```
+
+The viewer runs the reflex fly live: every neuron of the flight circuit is simulated in the
+browser from the exported couplings, and a test checks its steering against the Python model to
+1e-9. Every episode starts from a random state. Choose "fixed (wiring only)" to watch the circuit
+as wired, or "self-tuned" for the gains the fly tuned for itself over 600 episodes on seed 0, the
+default rather than a seed picked for looks (its final 100 episodes averaged 500 steps).
+Left: the cart, the steering signal (b1 and b2 activity on the right against the left) and the
+relative gains. Right: the circuit's 5,459 neurons in the brain and ventral nerve cord at their
+MaleCNS cell-body positions: halteres (amber), ocelli (green), HS cells (blue), interneurons
+(grey) and wing steering motor neurons (magenta), each brightening with its activity. Haltere
+afferents have their cell bodies in the halteres, outside the nervous system, so they and the few
+other neurons without a recorded position are drawn at the mean cell-body position of the neurons
+they synapse onto.
+
+## Run it
+
+```bash
+uv sync
+uv run fly-cartpole extract-flight   # downloads MaleCNS once; data/flight.npz is already committed
+uv run fly-cartpole reflex-tune      # self-tuning rates on tuning seeds 100-109
+uv run fly-cartpole reflex-compare   # reflex conditions on seeds 160-179, writes results/reflex/
+uv run fly-cartpole export-flight    # tunes the fly on seed 0 and writes web/data/flight.json
+uv run fly-cartpole extract          # the mushroom bodies; data/mb_*.npz are already committed
+uv run fly-cartpole tune             # mushroom body search on tuning seeds 100-139
+uv run fly-cartpole compare          # mushroom body conditions on seeds 70-89, writes results/
+uv run pytest
+```
+
+On 12 CPU cores `reflex-tune` and `reflex-compare` take about 1.5 hours each, `tune` about
+2 hours 40 minutes and `compare` about 1 hour 35 minutes.
+
 ## Credits
 
 - MaleCNS v1.0 connectome, CC BY 4.0; see [NOTICE.md](NOTICE.md).
@@ -260,3 +389,6 @@ On 12 CPU cores `tune` takes about 2 hours 40 minutes and `compare` about 1 hour
   Anderson 1983 (cart-pole and the actor-critic); Ng, Harada and Russell 1999, *ICML*
   (potential-based reward shaping); Maye et al. 2007, *PLoS ONE* (spontaneous behaviour in
   flies).
+- Dickinson 1999, *Philosophical Transactions of the Royal Society B* (haltere-mediated
+  equilibrium reflexes); Fayyazuddin and Dickinson 1996, *Journal of Neuroscience* (haltere input
+  to the b1 steering motor neuron).

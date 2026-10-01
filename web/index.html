@@ -13,11 +13,11 @@
     --ink-secondary: #c3c2b7;
     --ink-muted: #898781;
     --hairline: rgba(255, 255, 255, 0.10);
-    --pn: #3987e5;
-    --kc: #c3c2b7;
-    --mbon: #d55181;
-    --reward: #0ca30c;
-    --punish: #fab219;
+    --haltere: #fab219;
+    --ocellar: #0ca30c;
+    --hs: #3987e5;
+    --interneuron: #c3c2b7;
+    --wing-motor: #d55181;
   }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--plane); color: var(--ink); font: 14px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
@@ -28,18 +28,18 @@
   section { background: var(--surface); border: 1px solid var(--hairline); border-radius: 12px; padding: 16px; min-width: 0; }
   canvas#cartpole { width: 100%; height: auto; display: block; }
   #scene { width: 100%; aspect-ratio: 1 / 1; }
-  .values { display: grid; grid-template-columns: 150px 1fr 72px; gap: 6px 8px; align-items: center; margin-top: 12px; font-variant-numeric: tabular-nums; }
-  .bar { height: 10px; background: #2c2c2a; border-radius: 4px; overflow: hidden; }
-  .bar > div { height: 100%; width: 0; background: var(--ink-secondary); border-radius: 0 4px 4px 0; }
-  .bar.chosen > div { background: var(--ink); }
+  .steer { display: grid; grid-template-columns: 90px 1fr 90px; gap: 8px; align-items: center; margin-top: 12px; color: var(--ink-secondary); font-size: 12px; }
+  .steer span:last-child { text-align: right; }
+  .track { position: relative; height: 10px; background: #2c2c2a; border-radius: 4px; overflow: hidden; }
+  .track > div { position: absolute; top: 0; bottom: 0; background: var(--wing-motor); }
+  .track::after { content: ""; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: var(--ink-muted); }
   .status { margin-top: 12px; color: var(--ink-secondary); font-variant-numeric: tabular-nums; }
-  #dopamine { font-weight: 600; }
   ul.legend { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-wrap: wrap; gap: 8px 16px; color: var(--ink-secondary); }
   ul.legend li::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; background: var(--swatch); vertical-align: -1px; }
   .note { color: var(--ink-muted); font-size: 12px; margin: 8px 0 0; }
   footer { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 16px; margin-bottom: 24px; }
   button, select { background: var(--surface); color: var(--ink); border: 1px solid var(--hairline); border-radius: 8px; padding: 6px 12px; font: inherit; }
-  @media (max-width: 800px) { main { grid-template-columns: minmax(0, 1fr); } .values { grid-template-columns: 110px 1fr 64px; } }
+  @media (max-width: 800px) { main { grid-template-columns: minmax(0, 1fr); } }
 </style>
 <script type="importmap">
   { "imports": {
@@ -51,28 +51,28 @@
 <body>
 <header>
   <h1>fly-cartpole</h1>
-  <p>A fruit fly's two mushroom bodies, wired from the MaleCNS connectome, balance a pole. Every episode starts from a random state, and the fly's choices are computed live in your browser.</p>
+  <p>The circuit a fruit fly uses to stay upright in flight, wired from the MaleCNS connectome, balances a pole without learning. Every episode starts from a random state, and every neuron of the circuit is simulated live in your browser.</p>
 </header>
 <main>
   <section aria-label="CartPole">
     <canvas id="cartpole" width="640" height="360"></canvas>
-    <div class="values">
-      <span>left body · push left</span><div class="bar" id="bar-left"><div></div></div><span id="value-left"></span>
-      <span>right body · push right</span><div class="bar" id="bar-right"><div></div></div><span id="value-right"></span>
+    <div class="steer">
+      <span>left wing</span><div class="track" id="steer-bar"><div></div></div><span>right wing</span>
     </div>
-    <div class="status">episode <span id="episode"></span> · step <span id="step"></span> · <span id="dopamine"></span></div>
+    <div class="status">episode <span id="episode"></span> · step <span id="step"></span> · steer <span id="steer"></span></div>
     <div class="status">best <span id="best"></span> · mean of last 10 <span id="mean"></span></div>
+    <div class="status">gains: ocelli (angle) <span id="gain-angle"></span> · halteres (rate) <span id="gain-rate"></span> · HS (drift) <span id="gain-drift"></span></div>
   </section>
-  <section aria-label="Mushroom body activity">
+  <section aria-label="Flight circuit activity">
     <div id="scene"></div>
     <ul class="legend">
-      <li style="--swatch: var(--pn)">PN (input)</li>
-      <li style="--swatch: var(--kc)">KC (sparse code)</li>
-      <li style="--swatch: var(--mbon)">MBON (value)</li>
-      <li style="--swatch: var(--reward)">▲ PAM (better than expected)</li>
-      <li style="--swatch: var(--punish)">✕ PPL1 (worse than expected)</li>
+      <li style="--swatch: var(--haltere)">halteres (rotation rate)</li>
+      <li style="--swatch: var(--ocellar)">ocelli (tilt)</li>
+      <li style="--swatch: var(--hs)">HS cells (drift)</li>
+      <li style="--swatch: var(--interneuron)">interneurons</li>
+      <li style="--swatch: var(--wing-motor)">wing steering motor neurons</li>
     </ul>
-    <p class="note">Both mushroom bodies are drawn at their MaleCNS cell-body positions: the left one values pushing left, the right one pushing right, and the Kenyon cells of the chosen side glow brightest. Cell bodies sit at the brain surface, so a dot identifies a neuron, not where its synapses compute. Only the mushroom bodies are simulated. Drag to rotate.</p>
+    <p class="note">5,459 neurons of the brain and ventral nerve cord on paths of at most three connections from the halteres, ocelli and HS cells to the wing steering motor neurons, drawn at their MaleCNS cell-body positions; haltere afferents, whose cell bodies sit in the halteres, are drawn where they synapse. Brightness follows each neuron's activity. The push follows the difference between the right and left b1 and b2 motor neurons, which raise the wing's stroke amplitude. Nothing learns while you watch. Drag to rotate.</p>
   </section>
 </main>
 <footer>
@@ -82,8 +82,8 @@
     <option value="0.25">0.25×</option><option value="0.5">0.5×</option>
     <option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option>
   </select></label>
-  <label>brain <select id="brain">
-    <option value="trained" selected>after learning</option><option value="naive">before learning</option>
+  <label>gains <select id="gains">
+    <option value="fixed" selected>fixed (wiring only)</option><option value="adapted">self-tuned</option>
   </select></label>
 </footer>
 <script type="module" src="app.js"></script>

@@ -29,3 +29,15 @@ def test_reflex_commands_default_to_their_own_seeds_and_results():
     compare = build_parser().parse_args(["reflex-compare"])
     tune = build_parser().parse_args(["reflex-tune"])
     assert (compare.seeds, compare.results, tune.seeds, tune.results) == ("160-179", REFLEX_RESULTS_DIR, "100-109", REFLEX_RESULTS_DIR)
+
+
+def test_the_viewer_is_exported_from_the_reflex_fly():
+    import pytest
+
+    from fly_cartpole.cli import build_parser
+    from fly_cartpole.paths import FLIGHT_PATH, REFLEX_RESULTS_DIR, WEB_DATA_DIR
+
+    args = build_parser().parse_args(["export-flight"])
+    assert (args.seed, args.flight, args.results, args.web_data) == (0, FLIGHT_PATH, REFLEX_RESULTS_DIR, WEB_DATA_DIR)
+    with pytest.raises(SystemExit):
+        build_parser().parse_args(["export"])

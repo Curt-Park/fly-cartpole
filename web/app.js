@@ -2,29 +2,24 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { ANGLE_LIMIT, MAX_STEPS, TRACK_LIMIT, fell, randomState, step } from "./cartpole.js";
-import { evaluate, probabilityLeft } from "./fly.js";
 import { framesDue } from "./playback.js";
+import { createReflex } from "./reflex.js";
 
 const STEPS_PER_SECOND = 50; // CartPole advances 0.02 s per step
 const HOLD_LAST_FRAME_MS = 1200;
-const COLOURS = {
-  pn: new THREE.Color("#3987e5"),
-  kc: new THREE.Color("#c3c2b7"),
-  mbon: new THREE.Color("#d55181"),
-  pam: new THREE.Color("#0ca30c"),
-  ppl1: new THREE.Color("#fab219"),
-};
-const SIZES = { pn: 0.03, kc: 0.02, mbon: 0.06, pam: 0.045, ppl1: 0.06 };
 // Large populations rest dimmer: overlapping additive points would otherwise hide which cells are active.
-const RESTING = { pn: 0.15, kc: 0.04, mbon: 0.15, pam: 0.05, ppl1: 0.15 };
-const SIDE_NAMES = ["left", "right"];
+const STYLES = {
+  haltere: { colour: "#fab219", size: 0.03, resting: 0.2 },
+  ocellar: { colour: "#0ca30c", size: 0.06, resting: 0.25 },
+  hs: { colour: "#3987e5", size: 0.06, resting: 0.25 },
+  interneuron: { colour: "#c3c2b7", size: 0.014, resting: 0.04 },
+  wing_motor: { colour: "#d55181", size: 0.05, resting: 0.2 },
+};
 
-const [cells, model] = await Promise.all([
-  fetch("data/cells.json").then((response) => response.json()),
-  fetch("data/model.json").then((response) => response.json()),
-]);
+const model = await fetch("data/flight.json").then((response) => response.json());
+const reflex = createReflex(model);
 
-// Scene: one point cloud per population and side, so sizes and colours can differ.
+// Scene: one point cloud per role.
 const container = document.getElementById("scene");
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(window.devicePixelRatio);
@@ -37,47 +32,43 @@ controls.enableDamping = true;
 controls.autoRotate = true;
 controls.autoRotateSpeed = 0.6;
 
-function makeCloud(population, points) {
-  const kept = [];
-  points.forEach((point, index) => { if (point) kept.push([index, point]); });
+function makeCloud(role) {
+  const roleIndex = model.roles.indexOf(role);
+  const kept = model.role.flatMap((value, index) => (value === roleIndex && model.positions[index] ? [index] : []));
   const positions = new Float32Array(kept.length * 3);
-  kept.forEach(([, point], row) => positions.set(point, row * 3));
+  kept.forEach((index, row) => positions.set(model.positions[index], row * 3));
   const geometry = new THREE.BufferGeometry();
   geometry.setAttribute("position", new THREE.BufferAttribute(positions, 3));
   geometry.setAttribute("color", new THREE.BufferAttribute(new Float32Array(kept.length * 3), 3));
   const material = new THREE.PointsMaterial({
-    size: SIZES[population], vertexColors: true, sizeAttenuation: true,
+    size: STYLES[role].size, vertexColors: true, sizeAttenuation: true,
     transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
   });
   scene.add(new THREE.Points(geometry, material));
-  // rowOf maps a circuit index to its drawn row; cells without a soma have none.
-  return { population, geometry, rowOf: new Map(kept.map(([index], row) => [index, row])), intensity: new Float32Array(points.length) };
+  return { role, geometry, neurons: kept, base: new THREE.Color(STYLES[role].colour), scale: 1e-6 };
 }
 
-const clouds = {
-  pam: makeCloud("pam", cells.dan.map((point, index) => (cells.dan_is_punishment[index] ? null : point))),
-  ppl1: makeCloud("ppl1", cells.dan.map((point, index) => (cells.dan_is_punishment[index] ? point : null))),
-};
-for (const side of SIDE_NAMES) {
-  for (const population of ["pn", "kc", "mbon"]) clouds[`${side}_${population}`] = makeCloud(population, cells[side][population]);
-}
+const clouds = Object.keys(STYLES).map(makeCloud);
 
-function paint(cloud) {
+function paint(cloud, activity) {
   const colours = cloud.geometry.attributes.color;
-  const base = COLOURS[cloud.population];
-  const resting = RESTING[cloud.population];
-  for (const [index, row] of cloud.rowOf) {
-    const level = resting + (1 - resting) * Math.min(1, cloud.intensity[index]);
-    colours.setXYZ(row, base.r * level, base.g * level, base.b * level);
-  }
+  const { resting } = STYLES[cloud.role];
+  let peak = 0;
+  for (const index of cloud.neurons) peak = Math.max(peak, Math.abs(activity[index]));
+  // Each population is scaled to its own recent peak: sensors and interneurons differ by orders of magnitude.
+  cloud.scale = Math.max(cloud.scale * 0.995, peak, 1e-6);
+  cloud.neurons.forEach((index, row) => {
+    const level = resting + (1 - resting) * Math.min(1, Math.abs(activity[index]) / cloud.scale);
+    colours.setXYZ(row, cloud.base.r * level, cloud.base.g * level, cloud.base.b * level);
+  });
   colours.needsUpdate = true;
 }
 
-// Frame the bulk of the cells; a few distant dopamine somas may fall outside.
-const radii = [cells.left, cells.right].flatMap((side) => [...side.pn, ...side.kc, ...side.mbon]).concat(cells.dan)
-  .filter(Boolean).map((point) => Math.hypot(...point)).sort((first, second) => first - second);
-const radius = radii[Math.floor(radii.length * 0.95)];
-camera.position.set(0, radius * 0.3, (radius / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) * 1.1);
+// The view turns about the vertical axis, so the horizontal radius bounds what must stay in frame.
+const radii = model.positions.filter(Boolean).map(([x, , z]) => Math.hypot(x, z)).sort((first, second) => first - second);
+const radius = radii[radii.length - 1];
+// Start from the fly's side, where the brain and nerve cord lie end to end.
+camera.position.set((radius * 1.1) / Math.tan(THREE.MathUtils.degToRad(camera.fov / 2)), radius * 0.3, 0);
 
 function resize() {
   const width = container.clientWidth;
@@ -120,111 +111,57 @@ function drawCartPole([x, , theta], action, done) {
   context.fillText(action === 0 ? "◀ push left" : "push right ▶", action === 0 ? cartX - 110 : cartX + 44, groundY - 6);
 }
 
-// Live simulation: the exported brain is frozen; dopamine shows the prediction error it would signal.
+// Live simulation: the reflex runs on the exported circuit; nothing learns in the browser.
 const elements = Object.fromEntries(
-  ["play", "restart", "speed", "brain", "episode", "step", "dopamine", "best", "mean", "value-left", "value-right", "bar-left", "bar-right"]
+  ["play", "restart", "speed", "gains", "episode", "step", "steer", "best", "mean", "steer-bar", "gain-angle", "gain-rate", "gain-drift"]
     .map((id) => [id, document.getElementById(id)]),
 );
 const lengths = [];
-let trained = true;
+let gains = model.gains_fixed;
 let state;
 let steps;
-let evaluation;
 let latest;
 let done;
 let heldSince = null;
 let playing = true;
 let lastTick = performance.now();
-let rewardGlow = 0;
-let punishGlow = 0;
-let valueScale = 1e-6;
-const mbonScale = [1e-6, 1e-6];
-
-function baseline() {
-  if (!lengths.length) return model.initial_baseline;
-  const recent = lengths.slice(-model.baseline_window);
-  return recent.reduce((total, length) => total + length, 0) / recent.length;
-}
+let steerScale = 1e-6;
+const idle = new Float64Array(reflex.size);
 
 function newEpisode() {
   state = randomState();
+  reflex.reset();
   steps = 0;
   done = false;
   heldSince = null;
-  evaluation = evaluate(model, state, trained);
-  latest = { action: evaluation.values[0] >= evaluation.values[1] ? 0 : 1, error: 0, evaluation };
-  rewardGlow = punishGlow = 0;
+  latest = { action: 0, steer: 0, activity: idle };
   render();
 }
 
-// Closer to upright and centred is better; mirrors fly_cartpole.dopamine.posture_potential.
-function posturePotential([x, , theta]) {
-  return -((theta / ANGLE_LIMIT) ** 2 + (x / TRACK_LIMIT) ** 2);
-}
-
 function advance() {
-  const current = evaluation;
-  const action = Math.random() < probabilityLeft(model, current.values) ? 0 : 1;
-  const before = state;
-  state = step(state, action);
+  latest = reflex.act(state, gains);
+  state = step(state, latest.action);
   steps += 1;
-  const fellOver = fell(state);
-  done = fellOver || steps >= MAX_STEPS;
-  const limit = baseline();
-  const posture = model.posture_weight * (model.gamma * posturePotential(state) - posturePotential(before));
-  const reward = (!fellOver && limit !== null && steps > limit ? model.reward_per_step : 0) + posture;
-  const punish = fellOver ? 1 : 0;
-  evaluation = evaluate(model, state, trained);
-  let upcoming = 0;
-  if (!fellOver) {
-    const pLeft = probabilityLeft(model, evaluation.values);
-    upcoming = pLeft * evaluation.values[0] + (1 - pLeft) * evaluation.values[1];
-  }
-  const error = model.outcome_scale * (reward - punish) + model.gamma * upcoming - current.values[action];
-  latest = { action, error, evaluation: current };
-  rewardGlow = Math.max(rewardGlow * 0.85, Math.min(1, Math.max(error, 0) * 10));
-  punishGlow = Math.max(punishGlow * 0.92, Math.min(1, Math.max(-error, 0) * 3));
+  done = fell(state) || steps >= MAX_STEPS;
   if (done) lengths.push(steps);
 }
 
 function render() {
-  const { action, error, evaluation: shown } = latest;
+  const { action, steer, activity } = latest;
   drawCartPole(state, action, done);
-  shown.sides.forEach((side, index) => {
-    const name = SIDE_NAMES[index];
-    model.sides[index].pn_group.forEach((group, pn) => { clouds[`${name}_pn`].intensity[pn] = shown.activity[group]; });
-    const kcCloud = clouds[`${name}_kc`];
-    kcCloud.intensity.fill(0);
-    for (const kc of side.active) kcCloud.intensity[kc] = index === action ? 1 : 0.35;
-    mbonScale[index] = Math.max(mbonScale[index], ...side.mbon);
-    side.mbon.forEach((value, mbon) => { clouds[`${name}_mbon`].intensity[mbon] = value / mbonScale[index]; });
-  });
-  clouds.pam.intensity.fill(rewardGlow);
-  clouds.ppl1.intensity.fill(punishGlow);
-  Object.values(clouds).forEach(paint);
-
-  valueScale = Math.max(valueScale, ...shown.values.map(Math.abs));
-  ["left", "right"].forEach((name, index) => {
-    const value = shown.values[index];
-    elements[`value-${name}`].textContent = value.toFixed(4);
-    elements[`bar-${name}`].firstElementChild.style.width = `${(50 + (50 * value) / valueScale).toFixed(1)}%`;
-    elements[`bar-${name}`].classList.toggle("chosen", action === index);
-  });
+  clouds.forEach((cloud) => paint(cloud, activity));
+  steerScale = Math.max(steerScale * 0.995, Math.abs(steer), 1e-6);
+  const bar = elements["steer-bar"].firstElementChild;
+  const share = Math.min(1, Math.abs(steer) / steerScale) * 50;
+  bar.style.left = `${steer >= 0 ? 50 : 50 - share}%`;
+  bar.style.width = `${share}%`;
+  elements.steer.textContent = `${steer >= 0 ? "+" : ""}${steer.toExponential(2)}`;
   elements.episode.textContent = lengths.length + (done ? 0 : 1);
   elements.step.textContent = steps;
-  if (error < -1e-3) {
-    elements.dopamine.textContent = `✕ PPL1: worse than expected (${error.toFixed(3)})`;
-    elements.dopamine.style.color = "var(--punish)";
-  } else if (error > 1e-3) {
-    elements.dopamine.textContent = `▲ PAM: better than expected (+${error.toFixed(3)})`;
-    elements.dopamine.style.color = "var(--reward)";
-  } else {
-    elements.dopamine.textContent = "no surprise";
-    elements.dopamine.style.color = "var(--ink-muted)";
-  }
   const recent = lengths.slice(-10);
   elements.best.textContent = lengths.length ? Math.max(...lengths) : "–";
   elements.mean.textContent = recent.length ? (recent.reduce((total, length) => total + length, 0) / recent.length).toFixed(0) : "–";
+  ["angle", "rate", "drift"].forEach((name, index) => { elements[`gain-${name}`].textContent = gains[index].toFixed(2); });
 }
 
 function tick(now) {
@@ -252,8 +189,8 @@ elements.play.addEventListener("click", () => {
   elements.play.textContent = playing ? "Pause" : "Play";
 });
 elements.restart.addEventListener("click", newEpisode);
-elements.brain.addEventListener("change", () => {
-  trained = elements.brain.value === "trained";
+elements.gains.addEventListener("change", () => {
+  gains = elements.gains.value === "adapted" ? model.gains_adapted : model.gains_fixed;
   lengths.length = 0;
   newEpisode();
 });

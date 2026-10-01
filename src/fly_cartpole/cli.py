@@ -67,10 +67,11 @@ def build_parser() -> argparse.ArgumentParser:
     compare.add_argument("--seeds", default=EVALUATION_SEEDS)
     add_run_options(compare, episodes=TRAINING_EPISODES)
 
-    export = commands.add_parser("export", help="train the bilateral fly and export it for the live web viewer")
-    export.add_argument("--seed", type=int, default=0)
-    export.add_argument("--web-data", type=Path, default=WEB_DATA_DIR)
-    add_run_options(export, episodes=TRAINING_EPISODES)
+    export_flight = commands.add_parser("export-flight", help="self-tune the reflex fly and export it for the live web viewer")
+    export_flight.add_argument("--seed", type=int, default=0)
+    export_flight.add_argument("--flight", type=Path, default=FLIGHT_PATH)
+    export_flight.add_argument("--results", type=Path, default=REFLEX_RESULTS_DIR)
+    export_flight.add_argument("--web-data", type=Path, default=WEB_DATA_DIR)
     return parser
 
 
@@ -86,6 +87,14 @@ def main(argv: list[str] | None = None) -> None:
         from .flight import extract_flight
 
         print(json.dumps(extract_flight(args.cache, args.output), indent=2))
+        return
+
+    if args.command == "export-flight":
+        from .flight_export import export_flight
+        from .reflex_report import PARAMETERS_FILE, load_reflex_parameters
+
+        params = load_reflex_parameters(args.results / PARAMETERS_FILE)
+        print(json.dumps(export_flight(args.seed, params, args.flight, args.web_data), indent=2))
         return
 
     if args.command in ("reflex-tune", "reflex-compare"):
@@ -119,7 +128,3 @@ def main(argv: list[str] | None = None) -> None:
         from .report import compare
 
         print(compare(parse_seeds(args.seeds), args.episodes, params, args.workers, args.circuit, args.results))
-    elif args.command == "export":
-        from .export import export
-
-        print(json.dumps(export(args.seed, args.episodes, params, args.circuit, web_data_dir=args.web_data), indent=2))

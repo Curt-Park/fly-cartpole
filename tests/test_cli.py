@@ -77,3 +77,10 @@ def test_the_compare_commands_take_reference_results():
     assert reflex.references == "results/reflex" and station.references == "results/staged,results/station"
     assert build_parser().parse_args(["station-compare"]).references == ""
     assert Path("results/reflex") == Path(reflex.references)
+
+
+def test_reflex_tune_takes_the_condition_to_tune():
+    from fly_cartpole.cli import build_parser
+
+    assert build_parser().parse_args(["reflex-tune"]).condition == "fly-reflex-adaptive"
+    assert build_parser().parse_args(["reflex-tune", "--condition", "linear-adaptive"]).condition == "linear-adaptive"

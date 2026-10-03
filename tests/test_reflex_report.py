@@ -1,5 +1,6 @@
 import json
 
+import numpy as np
 import pytest
 
 from fly_cartpole.reflex import load_flight
@@ -233,3 +234,41 @@ def test_station_compare_can_compare_with_conditions_saved_elsewhere(flight_path
     assert "the circuit's distance from the centre differs from its linear map's" in summary
     saved = json.loads((tmp_path / "linear" / "station.json").read_text())
     assert set(saved) == {"linear-station-staged-motion"}
+
+
+def test_lqr_gains_stabilise_cartpole_linearised_about_the_upright_pole():
+    from fly_cartpole.reflex_report import cartpole_linearisation, lqr_gains
+
+    transition, push = cartpole_linearisation()
+    gains = lqr_gains(transition, push)
+    assert np.abs(np.linalg.eigvals(transition - push @ gains[None, :])).max() < 1
+
+
+def test_lqr_pushes_toward_a_lean_and_banks_toward_the_centre(flight_path):
+    lqr = make_reflex_agent("lqr", load_flight(flight_path), QUICK, seed=0)
+    assert lqr.act(np.array([0.0, 0.0, 0.05, 0.0])).action == 1
+    # Like the landmark fly, it first pushes away from the centre so the pole leans back toward it.
+    assert lqr.act(np.array([1.0, 0.0, 0.0, 0.0])).action == 1
+    assert episodes_for("lqr", QUICK) == QUICK.fixed_episodes
+
+
+def test_long_episodes_run_the_lqr_itself(flight_path, monkeypatch):
+    import fly_cartpole.reflex_report as report
+
+    built = []
+    original = report.ReflexFly
+    monkeypatch.setattr(report, "ReflexFly", lambda *args, **kwargs: built.append(kwargs) or original(*args, **kwargs))
+    outcome = report.run_station_condition("lqr", 0, QUICK, flight_path, long_episodes=1, long_steps=200)
+    assert built == [] and outcome["lengths"] == [200] and outcome["gains"] == []
+
+
+def test_station_compare_reports_the_lqr_without_gains(flight_path, tmp_path):
+    summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                              long_episodes=1, long_steps=50, conditions=("lqr",))
+    assert "| lqr |" in summary and "| – |" in summary
+
+
+def test_reflex_tune_can_tune_another_condition(flight_path, tmp_path):
+    reflex_tune(seeds=[0], workers=1, flight_path=flight_path, results_dir=tmp_path, etas=(0.1,), sigmas=(0.1,), base=QUICK,
+                condition="linear-adaptive")
+    assert json.loads((tmp_path / "tuning.json").read_text())["condition"] == "linear-adaptive"

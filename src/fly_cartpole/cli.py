@@ -57,6 +57,8 @@ def build_parser() -> argparse.ArgumentParser:
         reflex.add_argument("--workers", type=int, default=os.cpu_count() or 1)
         reflex.add_argument("--flight", type=Path, default=FLIGHT_PATH)
         reflex.add_argument("--results", type=Path, default=REFLEX_RESULTS_DIR)
+        if name == "reflex-tune":
+            reflex.add_argument("--condition", default="fly-reflex-adaptive")
         if name == "reflex-compare":
             reflex.add_argument("--conditions", default="fly-reflex,fly-reflex-adaptive,fly-reflex-adaptive-shuffled,random")
             # The self-tuning rates come from reflex-tune, wherever the comparison writes its results.
@@ -129,7 +131,7 @@ def main(argv: list[str] | None = None) -> None:
         from .reflex_report import PARAMETERS_FILE, load_reflex_parameters, reflex_compare, reflex_tune
 
         if args.command == "reflex-tune":
-            print(reflex_tune(parse_seeds(args.seeds), args.workers, args.flight, args.results))
+            print(reflex_tune(parse_seeds(args.seeds), args.workers, args.flight, args.results, condition=args.condition))
         else:
             print(reflex_compare(parse_seeds(args.seeds), args.workers, load_reflex_parameters(args.reflex_results / PARAMETERS_FILE),
                                  args.flight, args.results, conditions=tuple(args.conditions.split(",")),

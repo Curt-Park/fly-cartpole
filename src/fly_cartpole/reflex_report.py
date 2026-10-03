@@ -31,11 +31,13 @@ LINEAR = "linear"
 LINEAR_ADAPTIVE = "linear-adaptive"
 LINEAR_STAGED_MOTION = "linear-station-staged-motion"
 LINEAR_CONDITIONS = (LINEAR, LINEAR_ADAPTIVE, LINEAR_STAGED_MOTION)
+# The engineer's reference: a linear controller designed from CartPole's equations, not learned.
+LQR = "lqr"
 STAGED = (STATION_STAGED, STATION_STAGED_MOTION, LINEAR_STAGED_MOTION)
 ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED, STATION_BALANCED, STATION_MOTION,
             LINEAR_ADAPTIVE) + STAGED
 STATION_CONDITIONS = (STATION_FIXED, "fly-reflex-adaptive", STATION)
-STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED
+STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED + (LQR,)
 RECORD_OF = {STATION_CENTRED: "centred", STATION_BALANCED: "balanced", STATION_MOTION: "balanced"}
 LANDMARK_OF = {STATION: "position", STATION_CENTRED: "position", STATION_BALANCED: "position", STATION_MOTION: "motion",
                STATION_STAGED: "position", STATION_STAGED_MOTION: "motion", LINEAR_STAGED_MOTION: "motion"}
@@ -79,7 +81,7 @@ HELD_CLAIMS = (
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
            STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834", STATION_BALANCED: "#4a3aa7", STATION_MOTION: "#e87ba4",
            STATION_STAGED: "#eda100", STATION_STAGED_MOTION: "#008300",
-           LINEAR: "#52514e", LINEAR_ADAPTIVE: "#52514e", LINEAR_STAGED_MOTION: "#52514e"}
+           LINEAR: "#52514e", LINEAR_ADAPTIVE: "#52514e", LINEAR_STAGED_MOTION: "#52514e", LQR: "#0b0b0b"}
 PARAMETERS_FILE = "hyperparameters.json"
 
 
@@ -124,17 +126,65 @@ class RandomPusher:
         pass
 
 
+def cartpole_linearisation() -> tuple[np.ndarray, np.ndarray]:
+    """CartPole-v1's Euler step about the upright pole: next state = transition @ state + push @ [force]."""
+    env = gym.make("CartPole-v1").unwrapped
+    # With the pole upright: angle'' = topple * angle - tip * force, cart'' = force / mass - slide * angle''.
+    lever = env.length * (4.0 / 3.0 - env.masspole / env.total_mass)
+    topple, tip = env.gravity / lever, 1.0 / (env.total_mass * lever)
+    slide = env.polemass_length / env.total_mass
+    rates = np.array([[0.0, 1.0, 0.0, 0.0], [0.0, 0.0, -slide * topple, 0.0], [0.0, 0.0, 0.0, 1.0], [0.0, 0.0, topple, 0.0]])
+    forcing = np.array([[0.0], [1.0 / env.total_mass + slide * tip], [0.0], [-tip]])
+    tau = env.tau
+    env.close()
+    return np.eye(4) + tau * rates, tau * forcing
+
+
+def lqr_gains(transition: np.ndarray, push: np.ndarray, state_cost: np.ndarray | None = None, force_cost: float = 1.0,
+              max_iterations: int = 100_000) -> np.ndarray:
+    """Infinite-horizon discrete LQR by Riccati iteration; textbook unit costs, nothing tuned to CartPole's score."""
+    state_cost = np.eye(len(transition)) if state_cost is None else state_cost
+    cost_to_go = state_cost
+    for _ in range(max_iterations):
+        gains = np.linalg.solve(force_cost + push.T @ cost_to_go @ push, push.T @ cost_to_go @ transition)
+        updated = state_cost + transition.T @ cost_to_go @ (transition - push @ gains)
+        if np.allclose(updated, cost_to_go, rtol=1e-12, atol=1e-12):
+            return gains.ravel()
+        cost_to_go = updated
+    raise RuntimeError("the Riccati iteration did not converge")
+
+
+class LQRController:
+    """Pushes with the sign of the LQR force; CartPole-v1 only offers full pushes either way."""
+
+    def __init__(self) -> None:
+        self.gains = lqr_gains(*cartpole_linearisation())
+        self.released = (0.0, 0.0)
+
+    def reset_episode(self) -> None:
+        pass
+
+    def act(self, state: np.ndarray) -> ReflexDecision:
+        force = -float(self.gains @ state)
+        return ReflexDecision(1 if force > 0 else 0, force)
+
+    def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
+        pass
+
+
 def episodes_for(condition: str, params: ReflexParameters) -> int:
     return params.adapt_episodes if condition in ADAPTIVE else params.fixed_episodes
 
 
 def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexParameters, seed: int):
-    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED + LINEAR_CONDITIONS
+    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED + LINEAR_CONDITIONS + (LQR,)
     if condition not in known:
         raise ValueError(f"condition must be one of {known}, got {condition!r}")
     rng = np.random.default_rng(seed)
     if condition == "random":
         return RandomPusher(rng)
+    if condition == LQR:
+        return LQRController()
     memoryless = condition in LINEAR_CONDITIONS
     if condition in ("fly-reflex", LINEAR):
         return ReflexFly(circuit, WIRING_ONLY, params.substeps, params.leak, memoryless)
@@ -163,9 +213,9 @@ def run_reflex_many(jobs: list[tuple[str, int, ReflexParameters]], workers: int,
 
 def reflex_tune(seeds: list[int], workers: int, flight_path: Path = FLIGHT_PATH, results_dir: Path = REFLEX_RESULTS_DIR,
                 etas: tuple[float, ...] = (0.03, 0.1, 0.3), sigmas: tuple[float, ...] = (0.1, 0.3),
-                base: ReflexParameters = ReflexParameters()) -> ReflexParameters:
+                base: ReflexParameters = ReflexParameters(), condition: str = "fly-reflex-adaptive") -> ReflexParameters:
     configs = [replace(base, eta=eta, sigma=sigma) for eta, sigma in itertools.product(etas, sigmas)]
-    jobs = [("fly-reflex-adaptive", seed, config) for config in configs for seed in seeds]
+    jobs = [(condition, seed, config) for config in configs for seed in seeds]
     lengths = run_reflex_many(jobs, workers, flight_path)
     table = []
     for index, config in enumerate(configs):
@@ -174,7 +224,7 @@ def reflex_tune(seeds: list[int], workers: int, flight_path: Path = FLIGHT_PATH,
     table.sort(key=lambda row: row["score"], reverse=True)
     best = replace(base, eta=table[0]["eta"], sigma=table[0]["sigma"])
     results_dir.mkdir(parents=True, exist_ok=True)
-    (results_dir / "tuning.json").write_text(json.dumps({"seeds": list(seeds), "configs": table}, indent=2) + "\n")
+    (results_dir / "tuning.json").write_text(json.dumps({"condition": condition, "seeds": list(seeds), "configs": table}, indent=2) + "\n")
     save_reflex_parameters(best, results_dir / PARAMETERS_FILE)
     return best
 
@@ -246,8 +296,11 @@ LONG_STEPS = 2000
 def hold_station(circuit: FlightCircuit, gains: tuple[float, ...], params: ReflexParameters, seed: int,
                  episodes: int = LONG_EPISODES, steps: int = LONG_STEPS, memoryless: bool = False) -> dict:
     """Episodes past CartPole-v1's 500-step cap, exploration off: they tell a slowed drift from a held station."""
+    return hold_with(ReflexFly(circuit, tuple(gains), params.substeps, params.leak, memoryless=memoryless), seed, episodes, steps)
+
+
+def hold_with(fly, seed: int, episodes: int = LONG_EPISODES, steps: int = LONG_STEPS) -> dict:
     env = gym.make("CartPole-v1", max_episode_steps=steps)
-    fly = ReflexFly(circuit, tuple(gains), params.substeps, params.leak, memoryless=memoryless)
     lengths, exits, offsets = [], 0, []
     # Offset seeds keep these starts apart from the adaptation episodes'.
     state, _ = env.reset(seed=seed + 10_000)
@@ -273,6 +326,9 @@ def run_station_condition(condition: str, seed: int, params: ReflexParameters, f
     circuit = load_flight(flight_path)
     fly = make_reflex_agent(condition, circuit, params, seed)
     lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), episodes_for(condition, params), seed)
+    if isinstance(fly, LQRController):
+        # A controller without sensor gains holds station as it is.
+        return {"episodes": lengths, "gains": [], **hold_with(fly, seed, long_episodes, long_steps)}
     adapted = isinstance(fly, AdaptiveReflexFly)
     held = hold_station(circuit, fly.tuned_gains() if adapted else fly.gains, params, seed, long_episodes, long_steps,
                         memoryless=fly.memoryless)
@@ -334,10 +390,11 @@ def held_summary(held: dict[str, dict[str, dict]], long_episodes: int, long_step
         lengths = np.array([np.mean(outcome["lengths"]) for outcome in by_seed.values()])
         offsets = np.array([outcome["mean_offset"] for outcome in by_seed.values()])
         exits = sum(outcome["exits"] for outcome in by_seed.values()) / (long_episodes * len(by_seed))
-        gains = np.median([np.array(outcome["gains"]) / outcome["gains"][0] for outcome in by_seed.values()], axis=0)
+        gains = (np.median([np.array(outcome["gains"]) / outcome["gains"][0] for outcome in by_seed.values()], axis=0)
+                 if all(outcome["gains"] for outcome in by_seed.values()) else None)
         per_seed[condition] = {"length": lengths, "offset": offsets}
         lines.append(f"| {condition} | {lengths.mean():.0f} ± {lengths.std():.0f} | {exits:.0%} | "
-                     f"{offsets.mean():.2f} ± {offsets.std():.2f} | {', '.join(f'{gain:.2f}' for gain in gains)} |")
+                     f"{offsets.mean():.2f} ± {offsets.std():.2f} | {'–' if gains is None else ', '.join(f'{gain:.2f}' for gain in gains)} |")
     rng = np.random.default_rng(1)
     lines += ["", "| claim | comparison | permutation p |", "|---|---|---|"]
     for claim, better, worse, measure, *options in HELD_CLAIMS:

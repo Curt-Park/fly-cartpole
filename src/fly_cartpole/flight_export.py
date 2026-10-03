@@ -12,8 +12,8 @@ from .dopamine import DopamineSchedule
 from .encoder import STATE_LIMITS
 from .flight import ROLES
 from .paths import FLIGHT_PATH, WEB_DATA_DIR
-from .reflex import SENSES, FlightCircuit, ReflexFly, load_flight, relative_gains
-from .reflex_report import STATION_STAGED_MOTION, ReflexParameters, make_reflex_agent
+from .reflex import SENSES, FlightCircuit, ReflexFly, effective_weights, load_flight, relative_gains
+from .reflex_report import LINEAR_STAGED_MOTION, STATION_STAGED_MOTION, LQRController, ReflexParameters, make_reflex_agent
 from .run import run_episodes
 
 
@@ -55,11 +55,16 @@ def physics_check(seed: int, steps: int = 60) -> dict:
     return {"start": start, "actions": actions[: len(states)], "states": states}
 
 
-def reflex_trajectory(circuit: FlightCircuit, gains: list[float], params: ReflexParameters, seed: int, steps: int = 150) -> dict:
+def reflex_trajectory(circuit: FlightCircuit, gains: list[float], params: ReflexParameters, seed: int, steps: int = 150,
+                      memoryless: bool = False) -> dict:
     """States the Python reflex saw and what it did; the browser must act the same on the same states."""
+    fly = ReflexFly(circuit, tuple(gains), params.substeps, params.leak, memoryless=memoryless)
+    return {"gains": list(gains), **controller_trajectory(fly, seed, steps)}
+
+
+def controller_trajectory(fly, seed: int, steps: int = 150) -> dict:
     env = gym.make("CartPole-v1")
     state, _ = env.reset(seed=seed)
-    fly = ReflexFly(circuit, tuple(gains), params.substeps, params.leak)
     states, actions, steers = [], [], []
     for _ in range(steps):
         decision = fly.act(state)
@@ -70,7 +75,7 @@ def reflex_trajectory(circuit: FlightCircuit, gains: list[float], params: Reflex
         if terminated or truncated:
             break
     env.close()
-    return {"gains": list(gains), "states": states, "actions": actions, "steers": steers}
+    return {"states": states, "actions": actions, "steers": steers}
 
 
 def write_json(path: Path, payload: dict) -> None:
@@ -85,6 +90,11 @@ def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGH
     fly = make_reflex_agent(STATION_STAGED_MOTION, circuit, params, seed)
     lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), params.adapt_episodes, seed)
     gains_tuned = relative_gains(fly.log_gains)
+    # The circuit collapsed to its settled linear map learns the same way, for comparison in the viewer.
+    linear = make_reflex_agent(LINEAR_STAGED_MOTION, circuit, params, seed)
+    run_episodes(linear, DopamineSchedule("mean", params.baseline_window, 0.0), params.adapt_episodes, seed)
+    linear_gains_tuned = relative_gains(linear.log_gains)
+    lqr = LQRController()
     write_json(web_data_dir / "flight.json", {
         "roles": list(ROLES),
         "role": circuit.role.tolist(),
@@ -100,6 +110,12 @@ def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGH
         "gains_fixed": [1.0] * len(SENSES),
         "gains_tuned": gains_tuned,
         "trajectory": reflex_trajectory(circuit, gains_tuned, params, seed),
+        "linear": {
+            "weights": effective_weights(circuit, params.leak).tolist(),
+            "gains_tuned": linear_gains_tuned,
+            "trajectory": reflex_trajectory(circuit, linear_gains_tuned, params, seed, memoryless=True),
+        },
+        "lqr": {"gains": lqr.gains.tolist(), "trajectory": controller_trajectory(lqr, seed)},
         "physics": physics_check(seed),
     })
     return {
@@ -108,4 +124,5 @@ def export_flight(seed: int, params: ReflexParameters, flight_path: Path = FLIGH
         "final_100_mean": float(np.mean(lengths[-100:])),
         "longest": max(lengths),
         "gains_tuned": gains_tuned,
+        "linear_gains_tuned": linear_gains_tuned,
     }

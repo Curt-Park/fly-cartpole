@@ -61,3 +61,22 @@ def test_the_viewer_runs_the_gains_it_reports(flight_path, tmp_path):
     assert summary["gains_tuned"] == model["gains_tuned"] == model["trajectory"]["gains"]
     # The viewer runs the reference fly: it learned to balance, then to hold station by the landmark's place and slide.
     assert len(model["gains_tuned"]) == 5 and min(model["gains_tuned"]) > 0
+
+
+def test_the_viewer_also_gets_the_circuit_s_linear_controller_and_the_lqr(flight_path, tmp_path):
+    import numpy as np
+
+    from fly_cartpole.reflex import effective_weights, load_flight
+    from fly_cartpole.reflex_report import LQRController
+
+    summary = export_flight(seed=0, params=QUICK, flight_path=flight_path, web_data_dir=tmp_path)
+    model = json.loads((tmp_path / "flight.json").read_text())
+    assert model["linear"]["weights"] == pytest.approx(effective_weights(load_flight(flight_path), QUICK.leak).tolist())
+    # The linear controller learns exactly as the reference fly does: balance first, then hold station.
+    assert len(model["linear"]["gains_tuned"]) == 5 and min(model["linear"]["gains_tuned"]) > 0
+    assert summary["linear_gains_tuned"] == model["linear"]["gains_tuned"] == model["linear"]["trajectory"]["gains"]
+    assert model["lqr"]["gains"] == pytest.approx(LQRController().gains.tolist())
+    for controller in ("linear", "lqr"):
+        trajectory = model[controller]["trajectory"]
+        assert len(trajectory["states"]) == len(trajectory["actions"]) == len(trajectory["steers"]) > 0
+    assert np.isfinite(model["lqr"]["trajectory"]["steers"]).all()

@@ -3,6 +3,7 @@ import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { ANGLE_LIMIT, MAX_STEPS, TRACK_LIMIT, fell, randomState, step } from "./cartpole.js";
 import { createFlyView } from "./flyview.js";
+import { linearSteer, lqrForce } from "./controllers.js";
 import { framesDue } from "./playback.js";
 import { createReflex } from "./reflex.js";
 
@@ -126,9 +127,18 @@ const elements = Object.fromEntries(
     .map((id) => [id, document.getElementById(id)]),
 );
 const lengths = [];
-// Random pushes have no gains: the circuit rests, so nothing on screen suggests the fly is steering.
-const GAIN_SETS = { random: null, fixed: model.gains_fixed, tuned: model.gains_tuned };
-let gains = GAIN_SETS[elements.controller.value];
+// Controllers that steer without the circuit leave it resting, so nothing on screen suggests the fly is steering.
+const CONTROLLERS = {
+  random: { gains: null, steer: () => (Math.random() < 0.5 ? -1 : 1) },
+  fixed: { gains: model.gains_fixed },
+  tuned: { gains: model.gains_tuned },
+  linear: {
+    gains: model.linear.gains_tuned,
+    steer: (state) => linearSteer(state, model.state_limits, model.linear.weights, model.linear.gains_tuned),
+  },
+  lqr: { gains: null, steer: (state) => lqrForce(state, model.lqr.gains) },
+};
+let controller = CONTROLLERS[elements.controller.value];
 let state;
 let steps;
 let latest;
@@ -152,11 +162,11 @@ function newEpisode() {
 }
 
 function advance() {
-  if (gains) {
-    latest = reflex.act(state, gains);
+  if (controller.steer) {
+    const steer = controller.steer(state);
+    latest = { action: steer > 0 ? 1 : 0, steer, activity: idle };
   } else {
-    const action = Math.random() < 0.5 ? 0 : 1;
-    latest = { action, steer: action === 1 ? 1 : -1, activity: idle };
+    latest = reflex.act(state, controller.gains);
   }
   state = step(state, latest.action);
   steps += 1;
@@ -174,13 +184,14 @@ function render() {
   const share = Math.min(1, Math.abs(steer) / steerScale) * 50;
   bar.style.left = `${steer >= 0 ? 50 : 50 - share}%`;
   bar.style.width = `${share}%`;
-  elements.steer.textContent = gains ? `${steer >= 0 ? "+" : ""}${steer.toExponential(2)}` : `random ${action === 1 ? "right" : "left"}`;
+  elements.steer.textContent = controller === CONTROLLERS.random
+    ? `random ${action === 1 ? "right" : "left"}` : `${steer >= 0 ? "+" : ""}${steer.toExponential(2)}`;
   elements.episode.textContent = lengths.length + (done ? 0 : 1);
   elements.step.textContent = steps;
   const recent = lengths.slice(-10);
   elements.best.textContent = lengths.length ? Math.max(...lengths) : "–";
   elements.mean.textContent = recent.length ? (recent.reduce((total, length) => total + length, 0) / recent.length).toFixed(0) : "–";
-  ["angle", "rate", "drift", "position", "motion"].forEach((name, index) => { elements[`gain-${name}`].textContent = gains ? gains[index].toFixed(2) : "–"; });
+  ["angle", "rate", "drift", "position", "motion"].forEach((name, index) => { elements[`gain-${name}`].textContent = controller.gains ? controller.gains[index].toFixed(2) : "–"; });
 }
 
 function tick(now) {
@@ -211,7 +222,7 @@ elements.play.addEventListener("click", () => {
   elements.play.textContent = playing ? "Pause" : "Play";
 });
 elements.controller.addEventListener("change", () => {
-  gains = GAIN_SETS[elements.controller.value];
+  controller = CONTROLLERS[elements.controller.value];
   lengths.length = 0;
   // The random push's full-width bar would otherwise dwarf the fly's steering for tens of seconds.
   steerScale = 1e-6;

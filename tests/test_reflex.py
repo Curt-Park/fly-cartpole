@@ -244,3 +244,31 @@ def test_a_curriculum_without_a_landmark_is_an_error(flight_path):
 
     with pytest.raises(ValueError, match="landmark"):
         AdaptiveReflexFly(load_flight(flight_path), np.random.default_rng(0), eta=0.5, sigma=0.2, curriculum=10)
+
+
+def test_a_memoryless_fly_steers_like_the_circuit_once_it_settles(flight_path):
+    circuit = load_flight(flight_path)
+    state = np.array([0.5, 0.4, 0.05, 0.6])
+    gains = (1.0, 2.0, 0.5, 1.0, 1.0)
+    settled = ReflexFly(circuit, gains)
+    for _ in range(300):
+        steer = settled.act(state).steer
+    assert steer != 0
+    assert ReflexFly(circuit, gains, memoryless=True).act(state).steer == pytest.approx(steer, rel=1e-6)
+
+
+def test_a_memoryless_fly_answers_a_state_the_same_way_from_its_first_step(flight_path):
+    fly = ReflexFly(load_flight(flight_path), memoryless=True)
+    state = np.array([0.0, 0.0, 0.05, 0.3])
+    first = fly.act(state).steer
+    assert first != 0 and fly.act(state).steer == first
+
+
+def test_a_self_tuning_fly_can_be_memoryless(flight_path):
+    from fly_cartpole.reflex import AdaptiveReflexFly
+
+    circuit = load_flight(flight_path)
+    fly = AdaptiveReflexFly(circuit, np.random.default_rng(0), eta=0.3, sigma=0.3, memoryless=True)
+    state = np.array([0.0, 0.0, 0.05, 0.3])
+    expected = ReflexFly(circuit, fly.gains, memoryless=True).act(state).steer
+    assert fly.act(state).steer == pytest.approx(expected)

@@ -4,7 +4,8 @@ import pytest
 
 from fly_cartpole.reflex import load_flight
 from fly_cartpole.reflex_report import (REFLEX_CONDITIONS, ReflexParameters, episodes_for, hold_station,
-                                        load_reflex_parameters, reflex_compare, reflex_tune, run_reflex_condition,
+                                        load_reflex_parameters, make_reflex_agent, reflex_compare, reflex_tune,
+                                        run_reflex_condition,
                                         station_compare)
 
 QUICK = ReflexParameters(adapt_episodes=3, fixed_episodes=2)
@@ -168,4 +169,47 @@ def test_station_compare_tests_the_staged_motion_fly_against_the_reference(fligh
                               long_episodes=2, long_steps=50, conditions=("fly-reflex-station-staged-motion", "fly-reflex-station"))
     for text in ("curriculum learning keeps the cart nearer the centre", "curriculum learning holds the pole longer",
                  "curriculum learning changes the 500-step score"):
+        assert text in summary
+
+
+def test_the_linear_conditions_run_the_circuit_s_memoryless_map(flight_path):
+    circuit = load_flight(flight_path)
+    for condition in ("linear", "linear-adaptive", "linear-station-staged-motion"):
+        assert make_reflex_agent(condition, circuit, QUICK, seed=0).memoryless
+    assert not make_reflex_agent("fly-reflex", circuit, QUICK, seed=0).memoryless
+    staged = make_reflex_agent("linear-station-staged-motion", circuit, QUICK, seed=0)
+    assert staged.curriculum == QUICK.adapt_episodes // 2 and staged.adapted == 5
+
+
+def test_long_episodes_keep_the_linear_map(flight_path, monkeypatch):
+    import fly_cartpole.reflex_report as report
+
+    built = []
+    original = report.ReflexFly
+
+    def spy(*args, **kwargs):
+        built.append(kwargs.get("memoryless", False))
+        return original(*args, **kwargs)
+
+    monkeypatch.setattr(report, "ReflexFly", spy)
+    report.run_station_condition("linear-station-staged-motion", 0, QUICK, flight_path, long_episodes=1, long_steps=20)
+    report.run_station_condition("fly-reflex-station-staged-motion", 0, QUICK, flight_path, long_episodes=1, long_steps=20)
+    assert built == [True, False]
+
+
+def test_reflex_compare_tests_the_circuit_against_its_linear_map(flight_path, tmp_path):
+    summary = reflex_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                             conditions=("fly-reflex", "fly-reflex-adaptive", "linear", "linear-adaptive"))
+    for claim in ("the untuned circuit differs from its linear map", "the self-tuned circuit differs from its linear map"):
+        assert claim in summary
+    assert "wiring contributes" not in summary
+
+
+def test_station_compare_tests_the_final_fly_against_its_linear_map(flight_path, tmp_path):
+    summary = station_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path,
+                              long_episodes=2, long_steps=50,
+                              conditions=("fly-reflex-station-staged-motion", "linear-station-staged-motion"))
+    for text in ("curriculum learning: the circuit differs from its linear map",
+                 "the circuit's distance from the centre differs from its linear map's",
+                 "the circuit's long-episode length differs from its linear map's"):
         assert text in summary

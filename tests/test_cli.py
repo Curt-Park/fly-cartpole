@@ -50,3 +50,17 @@ def test_the_viewer_is_exported_from_the_reflex_fly():
     assert (args.seed, args.flight, args.results, args.web_data) == (0, FLIGHT_PATH, REFLEX_RESULTS_DIR, WEB_DATA_DIR)
     with pytest.raises(SystemExit):
         build_parser().parse_args(["export"])
+
+
+def test_reflex_compare_can_run_chosen_conditions_with_rates_from_elsewhere(monkeypatch, tmp_path):
+    import fly_cartpole.reflex_report as report
+    from fly_cartpole.cli import main
+    from fly_cartpole.reflex_report import ReflexParameters, save_reflex_parameters
+
+    save_reflex_parameters(ReflexParameters(eta=0.3, sigma=0.3), tmp_path / "rates" / report.PARAMETERS_FILE)
+    called = {}
+    monkeypatch.setattr(report, "reflex_compare", lambda seeds, workers, params, flight, results, conditions: called.update(
+        seeds=seeds, eta=params.eta, results=results, conditions=conditions) or "")
+    main(["reflex-compare", "--seeds", "260-261", "--conditions", "linear,linear-adaptive",
+          "--reflex-results", str(tmp_path / "rates"), "--results", str(tmp_path / "linear")])
+    assert called == {"seeds": [260, 261], "eta": 0.3, "results": tmp_path / "linear", "conditions": ("linear", "linear-adaptive")}

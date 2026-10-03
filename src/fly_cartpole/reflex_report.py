@@ -26,17 +26,25 @@ STATION_BALANCED = "fly-reflex-station-balanced"
 STATION_MOTION = "fly-reflex-station-motion"
 STATION_STAGED = "fly-reflex-station-staged"
 STATION_STAGED_MOTION = "fly-reflex-station-staged-motion"
-STAGED = (STATION_STAGED, STATION_STAGED_MOTION)
-ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED
+# The circuit collapsed to its settled linear map: same signs and ratios, no dynamics.
+LINEAR = "linear"
+LINEAR_ADAPTIVE = "linear-adaptive"
+LINEAR_STAGED_MOTION = "linear-station-staged-motion"
+LINEAR_CONDITIONS = (LINEAR, LINEAR_ADAPTIVE, LINEAR_STAGED_MOTION)
+STAGED = (STATION_STAGED, STATION_STAGED_MOTION, LINEAR_STAGED_MOTION)
+ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED, STATION_BALANCED, STATION_MOTION,
+            LINEAR_ADAPTIVE) + STAGED
 STATION_CONDITIONS = (STATION_FIXED, "fly-reflex-adaptive", STATION)
 STATION_ORDER = STATION_CONDITIONS + (STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED
 RECORD_OF = {STATION_CENTRED: "centred", STATION_BALANCED: "balanced", STATION_MOTION: "balanced"}
 LANDMARK_OF = {STATION: "position", STATION_CENTRED: "position", STATION_BALANCED: "position", STATION_MOTION: "motion",
-               STATION_STAGED: "position", STATION_STAGED_MOTION: "motion"}
+               STATION_STAGED: "position", STATION_STAGED_MOTION: "motion", LINEAR_STAGED_MOTION: "motion"}
 REFLEX_CLAIMS = (
     ("reflex beats chance", "fly-reflex", "random", "greater"),
     ("self-tuning helps", "fly-reflex-adaptive", "fly-reflex", "greater"),
     ("wiring contributes", "fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", "greater"),
+    ("the untuned circuit differs from its linear map", "fly-reflex", LINEAR, "two-sided"),
+    ("the self-tuned circuit differs from its linear map", "fly-reflex-adaptive", LINEAR_ADAPTIVE, "two-sided"),
 )
 STATION_CLAIMS = (
     ("position helps within the 500-step cap", STATION, "fly-reflex-adaptive", "greater"),
@@ -46,6 +54,7 @@ STATION_CLAIMS = (
     ("a motion term changes the 500-step score", STATION_MOTION, STATION_BALANCED, "two-sided"),
     ("staging changes the 500-step score", STATION_STAGED, STATION, "two-sided"),
     ("curriculum learning changes the 500-step score", STATION_STAGED_MOTION, STATION, "two-sided"),
+    ("curriculum learning: the circuit differs from its linear map", STATION_STAGED_MOTION, LINEAR_STAGED_MOTION, "two-sided"),
 )
 HELD_CLAIMS = (
     ("position holds the pole longer", STATION, "fly-reflex-adaptive", "length"),
@@ -63,10 +72,14 @@ HELD_CLAIMS = (
     ("a motion term helps the staged fly hold the pole longer", STATION_STAGED_MOTION, STATION_STAGED, "length"),
     ("curriculum learning keeps the cart nearer the centre", STATION_STAGED_MOTION, STATION, "offset"),
     ("curriculum learning holds the pole longer", STATION_STAGED_MOTION, STATION, "length"),
+    # Neither direction was predicted, so the circuit and its linear map are compared two-sided.
+    ("the circuit's distance from the centre differs from its linear map's", STATION_STAGED_MOTION, LINEAR_STAGED_MOTION, "offset", "two-sided"),
+    ("the circuit's long-episode length differs from its linear map's", STATION_STAGED_MOTION, LINEAR_STAGED_MOTION, "length", "two-sided"),
 )
 COLOURS = {"fly-reflex": "#2a78d6", "fly-reflex-adaptive": "#e34948", "fly-reflex-adaptive-shuffled": "#e34948",
            STATION: "#1baf7a", STATION_FIXED: "#1baf7a", STATION_CENTRED: "#eb6834", STATION_BALANCED: "#4a3aa7", STATION_MOTION: "#e87ba4",
-           STATION_STAGED: "#eda100", STATION_STAGED_MOTION: "#008300"}
+           STATION_STAGED: "#eda100", STATION_STAGED_MOTION: "#008300",
+           LINEAR: "#52514e", LINEAR_ADAPTIVE: "#52514e", LINEAR_STAGED_MOTION: "#52514e"}
 PARAMETERS_FILE = "hyperparameters.json"
 
 
@@ -116,21 +129,22 @@ def episodes_for(condition: str, params: ReflexParameters) -> int:
 
 
 def make_reflex_agent(condition: str, circuit: FlightCircuit, params: ReflexParameters, seed: int):
-    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED
+    known = REFLEX_CONDITIONS + (STATION, STATION_FIXED, STATION_CENTRED, STATION_BALANCED, STATION_MOTION) + STAGED + LINEAR_CONDITIONS
     if condition not in known:
         raise ValueError(f"condition must be one of {known}, got {condition!r}")
     rng = np.random.default_rng(seed)
     if condition == "random":
         return RandomPusher(rng)
-    if condition == "fly-reflex":
-        return ReflexFly(circuit, WIRING_ONLY, params.substeps, params.leak)
+    memoryless = condition in LINEAR_CONDITIONS
+    if condition in ("fly-reflex", LINEAR):
+        return ReflexFly(circuit, WIRING_ONLY, params.substeps, params.leak, memoryless)
     if condition == STATION_FIXED:
         return ReflexFly(circuit, WITH_LANDMARK, params.substeps, params.leak)
     if condition == "fly-reflex-adaptive-shuffled":
         circuit = shuffle_flight(circuit, rng)
     return AdaptiveReflexFly(circuit, rng, params.eta, params.sigma, params.baseline_window, params.substeps, params.leak,
                              landmark=LANDMARK_OF.get(condition, "none"), record=RECORD_OF.get(condition, "length"),
-                             curriculum=params.adapt_episodes // 2 if condition in STAGED else 0)
+                             curriculum=params.adapt_episodes // 2 if condition in STAGED else 0, memoryless=memoryless)
 
 
 def run_reflex_condition(condition: str, seed: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH) -> list[int]:
@@ -178,7 +192,7 @@ def plot_reflex(results: dict[str, dict[int, list[int]]], params: ReflexParamete
         if condition in ADAPTIVE:
             curves = np.array([moving_average(np.array(lengths)) for lengths in by_seed.values()])
             mean, spread = curves.mean(axis=0), curves.std(axis=0)
-            dashed = condition.endswith("shuffled")
+            dashed = condition.endswith("shuffled") or condition in LINEAR_CONDITIONS
             if not dashed:
                 axis.fill_between(episodes, mean - spread, mean + spread, color=COLOURS[condition], alpha=0.12, linewidth=0)
             axis.plot(episodes, mean, color=COLOURS[condition], linewidth=2, linestyle="--" if dashed else "-", label=condition)
@@ -206,9 +220,9 @@ def plot_reflex(results: dict[str, dict[int, list[int]]], params: ReflexParamete
 
 
 def reflex_compare(seeds: list[int], workers: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH,
-                   results_dir: Path = REFLEX_RESULTS_DIR) -> str:
-    jobs = [(condition, seed, params) for condition in REFLEX_CONDITIONS for seed in seeds]
-    results: dict[str, dict[int, list[int]]] = {condition: {} for condition in REFLEX_CONDITIONS}
+                   results_dir: Path = REFLEX_RESULTS_DIR, conditions: tuple[str, ...] = REFLEX_CONDITIONS) -> str:
+    jobs = [(condition, seed, params) for condition in conditions for seed in seeds]
+    results: dict[str, dict[int, list[int]]] = {condition: {} for condition in conditions}
     for (condition, seed, _), lengths in zip(jobs, run_reflex_many(jobs, workers, flight_path)):
         save_lengths(condition, seed, lengths, params, results_dir)
         results[condition][seed] = lengths
@@ -223,10 +237,10 @@ LONG_STEPS = 2000
 
 
 def hold_station(circuit: FlightCircuit, gains: tuple[float, ...], params: ReflexParameters, seed: int,
-                 episodes: int = LONG_EPISODES, steps: int = LONG_STEPS) -> dict:
+                 episodes: int = LONG_EPISODES, steps: int = LONG_STEPS, memoryless: bool = False) -> dict:
     """Episodes past CartPole-v1's 500-step cap, exploration off: they tell a slowed drift from a held station."""
     env = gym.make("CartPole-v1", max_episode_steps=steps)
-    fly = ReflexFly(circuit, tuple(gains), params.substeps, params.leak)
+    fly = ReflexFly(circuit, tuple(gains), params.substeps, params.leak, memoryless=memoryless)
     lengths, exits, offsets = [], 0, []
     # Offset seeds keep these starts apart from the adaptation episodes'.
     state, _ = env.reset(seed=seed + 10_000)
@@ -253,7 +267,8 @@ def run_station_condition(condition: str, seed: int, params: ReflexParameters, f
     fly = make_reflex_agent(condition, circuit, params, seed)
     lengths = run_episodes(fly, DopamineSchedule("mean", params.baseline_window, 0.0), episodes_for(condition, params), seed)
     adapted = isinstance(fly, AdaptiveReflexFly)
-    held = hold_station(circuit, fly.tuned_gains() if adapted else fly.gains, params, seed, long_episodes, long_steps)
+    held = hold_station(circuit, fly.tuned_gains() if adapted else fly.gains, params, seed, long_episodes, long_steps,
+                        memoryless=fly.memoryless)
     return {"episodes": lengths, "gains": relative_gains(fly.log_gains) if adapted else list(fly.gains), **held}
 
 
@@ -310,12 +325,15 @@ def held_summary(held: dict[str, dict[str, dict]], long_episodes: int, long_step
                      f"{offsets.mean():.2f} ± {offsets.std():.2f} | {', '.join(f'{gain:.2f}' for gain in gains)} |")
     rng = np.random.default_rng(1)
     lines += ["", "| claim | comparison | permutation p |", "|---|---|---|"]
-    for claim, better, worse, measure in HELD_CLAIMS:
+    for claim, better, worse, measure, *options in HELD_CLAIMS:
         if better not in per_seed or worse not in per_seed:
             continue
+        alternative = options[0] if options else "greater"
         if measure == "length":
-            p_value, compared = permutation_test(per_seed[better]["length"], per_seed[worse]["length"], rng), "long-episode length (greater)"
+            p_value = permutation_test(per_seed[better]["length"], per_seed[worse]["length"], rng, alternative=alternative)
+            compared = f"long-episode length ({'greater' if alternative == 'greater' else alternative})"
         else:
-            p_value, compared = permutation_test(per_seed[worse]["offset"], per_seed[better]["offset"], rng), "distance from centre (smaller)"
+            p_value = permutation_test(per_seed[worse]["offset"], per_seed[better]["offset"], rng, alternative=alternative)
+            compared = f"distance from centre ({'smaller' if alternative == 'greater' else alternative})"
         lines.append(f"| {claim} | {better} vs {worse}, {compared} | {p_value:.4f} |")
     return "\n".join(lines) + "\n"

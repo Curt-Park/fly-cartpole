@@ -24,6 +24,8 @@ LANDMARKS = {"none": 3, "position": 4, "motion": 5}
 BALANCE_SENSES = 3  # angle, rate and drift: the senses that hold the pole up
 # What an episode is judged by: how long the pole stayed up, how long the cart stayed near the landmark, or both halves.
 RECORDS = ("length", "centred", "balanced")
+# The state variable each sense reads, in SENSES order: drift and motion both see the cart's velocity.
+SENSE_STATE = (ANGLE, ANGLE_DOT, X_DOT, X, X_DOT)
 
 
 @dataclass(frozen=True)
@@ -77,6 +79,34 @@ def sensor_drive(circuit: FlightCircuit, state: np.ndarray, gains: tuple[float, 
     return drive
 
 
+def sense_inputs(state: np.ndarray) -> np.ndarray:
+    return np.clip(state / STATE_LIMITS, -1.0, 1.0)[list(SENSE_STATE)]
+
+
+def effective_weights(circuit: FlightCircuit, leak: float = 0.5, tolerance: float = 1e-12,
+                      max_updates: int = 10_000) -> np.ndarray:
+    """The steer each sense produces once the circuit settles: the circuit collapsed to a linear map without memory."""
+    right = np.flatnonzero(circuit.amplitude & (circuit.side > 0))
+    left = np.flatnonzero(circuit.amplitude & (circuit.side < 0))
+    weights = np.zeros(len(SENSES))
+    for sense, index in enumerate(SENSE_STATE):
+        state = np.zeros(4)
+        state[index] = STATE_LIMITS[index]
+        drive = sensor_drive(circuit, state, tuple(float(other == sense) for other in range(len(SENSES))))
+        activity = np.zeros(circuit.size)
+        for _ in range(max_updates):
+            synaptic = np.bincount(circuit.post, weights=activity[circuit.pre] * circuit.coupling, minlength=circuit.size)
+            updated = (1.0 - leak) * activity + leak * (synaptic + drive)
+            settled = np.abs(updated - activity).max() < tolerance
+            activity = updated
+            if settled:
+                break
+        else:
+            raise RuntimeError(f"the circuit did not settle for {SENSES[sense]} within {max_updates} updates")
+        weights[sense] = activity[right].sum() - activity[left].sum()
+    return weights
+
+
 def relative_gains(log_gains: np.ndarray) -> list[float]:
     """Gains with a geometric mean of 1: scaling every sense alike leaves the linear reflex's choices unchanged."""
     return np.exp(log_gains - log_gains.mean()).tolist() + [0.0] * (len(SENSES) - len(log_gains))
@@ -91,8 +121,11 @@ class ReflexFly:
     """Leaky signed rate units; activity is the deviation from tonic firing, so inhibition is negative."""
 
     def __init__(self, circuit: FlightCircuit, gains: tuple[float, ...] = WIRING_ONLY,
-                 substeps: int = 4, leak: float = 0.5) -> None:
+                 substeps: int = 4, leak: float = 0.5, memoryless: bool = False) -> None:
         self.circuit = circuit
+        # A memoryless fly keeps the circuit's signs and ratios but none of its dynamics: a linear controller.
+        self.memoryless = memoryless
+        self.weights = effective_weights(circuit, leak) if memoryless else None
         self.gains = tuple(gains)
         self.substeps = substeps
         self.leak = leak
@@ -111,9 +144,12 @@ class ReflexFly:
             self.activity = (1.0 - self.leak) * self.activity + self.leak * (synaptic + drive)
 
     def act(self, state: np.ndarray) -> ReflexDecision:
-        self.step_circuit(sensor_drive(self.circuit, state, self.gains))
-        # A body rolling right is righted by a stronger right wingbeat, matched to pushing the cart right.
-        steer = float(self.activity[self.right_amplitude].sum() - self.activity[self.left_amplitude].sum())
+        if self.memoryless:
+            steer = float(np.dot(np.multiply(self.gains, self.weights), sense_inputs(state)))
+        else:
+            self.step_circuit(sensor_drive(self.circuit, state, self.gains))
+            # A body rolling right is righted by a stronger right wingbeat, matched to pushing the cart right.
+            steer = float(self.activity[self.right_amplitude].sum() - self.activity[self.left_amplitude].sum())
         return ReflexDecision(1 if steer > 0 else 0, steer)
 
     def learn(self, punish: float, reward: float, next_state: np.ndarray, terminated: bool) -> None:
@@ -125,7 +161,7 @@ class AdaptiveReflexFly(ReflexFly):
 
     def __init__(self, circuit: FlightCircuit, rng: np.random.Generator, eta: float, sigma: float,
                  baseline_window: int = 20, substeps: int = 4, leak: float = 0.5, landmark: str = "none",
-                 record: str = "length", curriculum: int = 0) -> None:
+                 record: str = "length", curriculum: int = 0, memoryless: bool = False) -> None:
         if landmark not in LANDMARKS:
             raise ValueError(f"landmark must be one of {tuple(LANDMARKS)}, got {landmark!r}")
         if record not in RECORDS:
@@ -147,7 +183,7 @@ class AdaptiveReflexFly(ReflexFly):
         self.records: list[float] = []
         self.steps = 0
         self.time_near_landmark = 0.0
-        super().__init__(circuit, WIRING_ONLY, substeps, leak)
+        super().__init__(circuit, WIRING_ONLY, substeps, leak, memoryless)
 
     def gains_from(self, log_gains: np.ndarray) -> tuple[float, ...]:
         return tuple(np.exp(log_gains)) + (0.0,) * (len(SENSES) - self.adapted)

@@ -220,9 +220,16 @@ def plot_reflex(results: dict[str, dict[int, list[int]]], params: ReflexParamete
 
 
 def reflex_compare(seeds: list[int], workers: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH,
-                   results_dir: Path = REFLEX_RESULTS_DIR, conditions: tuple[str, ...] = REFLEX_CONDITIONS) -> str:
+                   results_dir: Path = REFLEX_RESULTS_DIR, conditions: tuple[str, ...] = REFLEX_CONDITIONS,
+                   references: tuple[Path, ...] = ()) -> str:
     jobs = [(condition, seed, params) for condition in conditions for seed in seeds]
-    results: dict[str, dict[int, list[int]]] = {condition: {} for condition in conditions}
+    results: dict[str, dict[int, list[int]]] = {}
+    # Conditions evaluated earlier join the comparison from where they were saved; nothing is copied.
+    for reference in references:
+        for saved in sorted(path.name for path in reference.iterdir() if path.is_dir() and any(path.glob("seed_*.json"))):
+            if saved not in conditions:
+                results.setdefault(saved, load_lengths(saved, reference))
+    results.update({condition: {} for condition in conditions})
     for (condition, seed, _), lengths in zip(jobs, run_reflex_many(jobs, workers, flight_path)):
         save_lengths(condition, seed, lengths, params, results_dir)
         results[condition][seed] = lengths
@@ -274,7 +281,8 @@ def run_station_condition(condition: str, seed: int, params: ReflexParameters, f
 
 def station_compare(seeds: list[int], workers: int, params: ReflexParameters, flight_path: Path = FLIGHT_PATH,
                     results_dir: Path = STATION_RESULTS_DIR, long_episodes: int = LONG_EPISODES,
-                    long_steps: int = LONG_STEPS, conditions: tuple[str, ...] = STATION_CONDITIONS) -> str:
+                    long_steps: int = LONG_STEPS, conditions: tuple[str, ...] = STATION_CONDITIONS,
+                    references: tuple[Path, ...] = ()) -> str:
     jobs = [(condition, seed) for condition in conditions for seed in seeds]
     held_path = results_dir / "station.json"
     # Conditions run earlier on the same seeds stay in the comparison.
@@ -295,8 +303,15 @@ def station_compare(seeds: list[int], workers: int, params: ReflexParameters, fl
                        (condition, seed) for condition, seed in jobs}
             for future in as_completed(futures):
                 keep(*futures[future], future.result())
+    # Conditions evaluated earlier join the comparison from where they were saved; nothing is copied.
+    sources = {condition: results_dir for condition in held}
+    for reference in references:
+        for condition, by_seed in json.loads((reference / "station.json").read_text()).items():
+            if condition not in sources:
+                held = {**held, condition: by_seed}
+                sources[condition] = reference
     ordered = [condition for condition in STATION_ORDER if condition in held]
-    results = {condition: load_lengths(condition, results_dir) for condition in ordered}
+    results = {condition: load_lengths(condition, sources[condition]) for condition in ordered}
     held = {condition: dict(sorted(held[condition].items(), key=lambda item: int(item[0]))) for condition in ordered}
     plot_reflex(results, params, results_dir / "learning_curves.png")
     summary = summarise(results, np.random.default_rng(0), STATION_CLAIMS) + held_summary(held, long_episodes, long_steps)

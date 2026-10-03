@@ -213,3 +213,23 @@ def test_station_compare_tests_the_final_fly_against_its_linear_map(flight_path,
                  "the circuit's distance from the centre differs from its linear map's",
                  "the circuit's long-episode length differs from its linear map's"):
         assert text in summary
+
+
+def test_reflex_compare_can_compare_with_conditions_saved_elsewhere(flight_path, tmp_path):
+    reflex_compare(seeds=[0, 1], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path / "fly",
+                   conditions=("fly-reflex",))
+    summary = reflex_compare(seeds=[2, 3], workers=1, params=QUICK, flight_path=flight_path, results_dir=tmp_path / "linear",
+                             conditions=("linear",), references=(tmp_path / "fly",))
+    assert "the untuned circuit differs from its linear map" in summary
+    # References are read where they were saved, not copied.
+    assert not (tmp_path / "linear" / "fly-reflex").exists()
+
+
+def test_station_compare_can_compare_with_conditions_saved_elsewhere(flight_path, tmp_path):
+    options = dict(workers=1, params=QUICK, flight_path=flight_path, long_episodes=2, long_steps=50)
+    station_compare(seeds=[0, 1], results_dir=tmp_path / "fly", conditions=("fly-reflex-station-staged-motion",), **options)
+    summary = station_compare(seeds=[2, 3], results_dir=tmp_path / "linear", conditions=("linear-station-staged-motion",),
+                              references=(tmp_path / "fly",), **options)
+    assert "the circuit's distance from the centre differs from its linear map's" in summary
+    saved = json.loads((tmp_path / "linear" / "station.json").read_text())
+    assert set(saved) == {"linear-station-staged-motion"}

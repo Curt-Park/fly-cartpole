@@ -59,8 +59,21 @@ def test_reflex_compare_can_run_chosen_conditions_with_rates_from_elsewhere(monk
 
     save_reflex_parameters(ReflexParameters(eta=0.3, sigma=0.3), tmp_path / "rates" / report.PARAMETERS_FILE)
     called = {}
-    monkeypatch.setattr(report, "reflex_compare", lambda seeds, workers, params, flight, results, conditions: called.update(
-        seeds=seeds, eta=params.eta, results=results, conditions=conditions) or "")
+    monkeypatch.setattr(report, "reflex_compare", lambda seeds, workers, params, flight, results, conditions, references: called.update(
+        seeds=seeds, eta=params.eta, results=results, conditions=conditions, references=references) or "")
     main(["reflex-compare", "--seeds", "260-261", "--conditions", "linear,linear-adaptive",
           "--reflex-results", str(tmp_path / "rates"), "--results", str(tmp_path / "linear")])
-    assert called == {"seeds": [260, 261], "eta": 0.3, "results": tmp_path / "linear", "conditions": ("linear", "linear-adaptive")}
+    assert called == {"seeds": [260, 261], "eta": 0.3, "results": tmp_path / "linear", "conditions": ("linear", "linear-adaptive"),
+                      "references": ()}
+
+
+def test_the_compare_commands_take_reference_results():
+    from pathlib import Path
+
+    from fly_cartpole.cli import build_parser
+
+    reflex = build_parser().parse_args(["reflex-compare", "--references", "results/reflex"])
+    station = build_parser().parse_args(["station-compare", "--references", "results/staged,results/station"])
+    assert reflex.references == "results/reflex" and station.references == "results/staged,results/station"
+    assert build_parser().parse_args(["station-compare"]).references == ""
+    assert Path("results/reflex") == Path(reflex.references)

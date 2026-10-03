@@ -25,6 +25,10 @@ def parse_seeds(text: str) -> list[int]:
     return seeds
 
 
+def parse_paths(text: str) -> tuple[Path, ...]:
+    return tuple(Path(part) for part in text.split(",") if part)
+
+
 def add_run_options(command: argparse.ArgumentParser, episodes: int) -> None:
     command.add_argument("--episodes", type=int, default=episodes)
     command.add_argument("--workers", type=int, default=os.cpu_count() or 1)
@@ -57,6 +61,7 @@ def build_parser() -> argparse.ArgumentParser:
             reflex.add_argument("--conditions", default="fly-reflex,fly-reflex-adaptive,fly-reflex-adaptive-shuffled,random")
             # The self-tuning rates come from reflex-tune, wherever the comparison writes its results.
             reflex.add_argument("--reflex-results", type=Path, default=REFLEX_RESULTS_DIR)
+            reflex.add_argument("--references", default="", help="comma-separated results folders to compare against")
 
     station = commands.add_parser("station-compare", help="the self-tuned reflex fly with and without a landmark, on fresh seeds")
     station.add_argument("--seeds", default="180-199")
@@ -65,6 +70,7 @@ def build_parser() -> argparse.ArgumentParser:
     station.add_argument("--flight", type=Path, default=FLIGHT_PATH)
     # The self-tuning rates come from reflex-tune; nothing is re-tuned for the landmark.
     station.add_argument("--reflex-results", type=Path, default=REFLEX_RESULTS_DIR)
+    station.add_argument("--references", default="", help="comma-separated results folders to compare against")
     station.add_argument("--results", type=Path, default=STATION_RESULTS_DIR)
 
     tune = commands.add_parser("tune", help="hyperparameter search on tuning seeds 100-139")
@@ -116,7 +122,7 @@ def main(argv: list[str] | None = None) -> None:
 
         params = load_reflex_parameters(args.reflex_results / PARAMETERS_FILE)
         print(station_compare(parse_seeds(args.seeds), args.workers, params, args.flight, args.results,
-                              conditions=tuple(args.conditions.split(","))))
+                              conditions=tuple(args.conditions.split(",")), references=parse_paths(args.references)))
         return
 
     if args.command in ("reflex-tune", "reflex-compare"):
@@ -126,7 +132,8 @@ def main(argv: list[str] | None = None) -> None:
             print(reflex_tune(parse_seeds(args.seeds), args.workers, args.flight, args.results))
         else:
             print(reflex_compare(parse_seeds(args.seeds), args.workers, load_reflex_parameters(args.reflex_results / PARAMETERS_FILE),
-                                 args.flight, args.results, conditions=tuple(args.conditions.split(","))))
+                                 args.flight, args.results, conditions=tuple(args.conditions.split(",")),
+                                 references=parse_paths(args.references)))
         return
 
     from .params import HYPERPARAMETERS_FILE, load_hyperparameters

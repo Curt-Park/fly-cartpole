@@ -32,11 +32,15 @@ the browser, so you can watch the fly at work.
 Each condition was evaluated once, on 20 seeds that had never been used before. A CartPole-v1 episode
 lasts at most 500 steps.
 
-| fly | what it tunes | seeds | mean of the last 100 episodes |
+| condition | what it tunes | seeds | mean of the last 100 episodes |
 |---|---|---|---|
 | wiring only | nothing | 160-179 | 275.6 ± 9.4 |
 | self-tuning | three sensor gains | 160-179 | 499.9 ± 0.3 |
+| self-tuning, wiring shuffled | three sensor gains | 160-179 | 165.9 ± 182.8 |
+| self-tuning, circuit collapsed to a linear controller | three sensor gains | 280-299 | 499.6 ± 0.7 |
 | **landmark + curriculum learning** | five sensor gains | 240-259 | **500.0 ± 0.0** |
+| landmark + curriculum learning, circuit collapsed to a linear controller | five sensor gains | 280-299 | 499.2 ± 1.1 |
+| LQR (designed from CartPole's equations, no learning) | – | 280-299 | 500.0 ± 0.0 |
 | random pushes (baseline) | – | 160-179 | 22.1 ± 0.8 |
 
 What I find most interesting is that the wired circuit, with no tuning at all, already lasts 275.6
@@ -46,16 +50,39 @@ without any adjustment.
 
 Once a fly tunes itself, though, it scores close to 500 almost every time, so differences barely show
 within the cap. I therefore ran the landmark flies for up to 2,000 steps per episode, ten episodes per
-seed, with their tuned gains and no exploration. The comparison is a landmark fly tuned only to keep
-the pole up for as long as possible.
+seed, with their tuned gains and no exploration. The first comparison is a landmark fly tuned only to
+keep the pole up for as long as possible.
 
-| fly | track exits | pole falls | mean distance from the centre |
-|---|---|---|---|
-| tuned only to keep the pole up | 10 of 200 | 0 | 0.48 m |
-| **curriculum learning** | **0 of 200** | **0** | **0.12 m** |
+| condition | seeds | track exits | pole falls | mean distance from the centre |
+|---|---|---|---|---|
+| tuned only to keep the pole up | 240-259 | 10 of 200 | 0 | 0.48 m |
+| **curriculum learning** | 240-259 | **0 of 200** | **0** | **0.12 m** |
+| curriculum learning, circuit collapsed to a linear controller | 280-299 | 8 of 200 | 9 | 0.26 m |
+| LQR | 280-299 | 0 of 200 | 0 | 0.20 m |
 
-The full numbers and permutation tests are in [reflex fly](results/reflex/summary.md) and
-[landmark + curriculum learning](results/staged/summary.md).
+### How much the circuit itself matters
+
+CartPole can be balanced by a linear controller with a handful of weights, so it is fair to ask whether
+5,459 neurons are needed at all. To find out, I collapsed the circuit into its own linear controller:
+each sense steers with the strength it has once the circuit settles, so the signs and the ratios between
+senses are the circuit's, but none of its dynamics are. It was tuned exactly like the fly, and a
+learning-rate search of its own picked the same rates. I also added LQR, a four-weight controller
+computed from CartPole's equations, as the engineer's reference.
+
+- Balancing alone needs no more than a small linear controller. The circuit's linear controller scores
+  the same as the circuit (499.6 against 499.9), and LQR reaches 500 without learning anything.
+- What the wiring contributes is mostly the signs of its pathways: shuffling the same connections drops
+  the score to 165.9.
+- Holding station under the same learning is different. I evaluated the linear controller on two fresh
+  seed sets, and both times the circuit did clearly better: the circuit never failed and stayed 0.12 m
+  from the centre, while the linear controller failed 36 and 17 times out of 200 and stayed 0.32 and
+  0.26 m away. The circuit's dynamics seem to help, though I have not yet shown why.
+- None of this is evidence about real flies: the neurons are linear rate units, and the mapping from
+  CartPole to the fly's senses is my own.
+
+The full numbers and permutation tests are in [reflex fly](results/reflex/summary.md),
+[landmark + curriculum learning](results/staged/summary.md) and the linear controller and LQR
+([balancing](results/linear-retuned/summary.md), [holding station](results/linear-retuned-station/summary.md)).
 
 ## What finally worked
 
@@ -92,6 +119,8 @@ python3 -m http.server -d web        # the web viewer at http://localhost:8000
 uv run fly-cartpole reflex-tune      # pick the self-tuning rates on tuning seeds 100-109
 uv run fly-cartpole station-compare --seeds 240-259 \
   --conditions fly-reflex-station-staged-motion,fly-reflex-station --results results/staged
+uv run fly-cartpole station-compare --seeds 280-299 \
+  --conditions linear-station-staged-motion,lqr --references results/staged --results results/linear-retuned-station
 uv run fly-cartpole export-flight    # tune the viewer's fly on seed 0 and write web/data/flight.json
 uv run pytest
 ```

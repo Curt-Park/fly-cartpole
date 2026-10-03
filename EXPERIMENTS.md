@@ -8,7 +8,8 @@ where the project ended up; Part 2 covers my first attempt, with the mushroom bo
 evaluated them once on seeds no earlier run had touched. The evaluation seeds were spent in this
 order: 0-89 on the mushroom body fly (five evaluations, all reported below), 160-179 on the reflex fly
 without a landmark, 180-199 on the landmark, 200-219 and 220-239 on two ways of judging an episode,
-and 240-259 on curriculum learning with the landmark's motion.
+240-259 on curriculum learning with the landmark's motion, and 260-279 and 280-299 on comparing the
+circuit with its own linear controller and with LQR.
 
 ## Part 1: the reflex fly
 
@@ -214,6 +215,72 @@ cap every seed scored 500 in all of its last 100 episodes; that beats the refere
 station keeping did not cost balance: the haltere gain stayed where the first stage had left it, and
 the pole never fell.
 
+### Is the circuit more than a small linear controller? (seeds 260-299)
+
+After the project was shared, a reader pointed out that CartPole needs only a tiny linear controller and
+that my neurons are linear rate units, so 5,459 of them prove little on their own. Both points are fair.
+Because the circuit is linear and the fly reads only the sign of its steering signal, the whole circuit
+settles into one linear map from the five senses to the push. I measured that map directly, driving one
+sense at a time until the circuit settled. Relative to the ocelli, the halteres steer 47.8 times as
+strongly, the HS cells -0.04 times, and the landmark's position and motion exactly as strongly as the
+ocelli, since they enter through the same neurons.
+
+**The circuit's own linear controller** (`linear`, `linear-adaptive`, `linear-station-staged-motion`)
+steers with that map and nothing else: the same senses, scaling, signs and starting ratios, but no
+memory, so none of the circuit's dynamics. It learns exactly as the fly does. **LQR** (`lqr`) is the
+engineer's reference: four weights computed by Riccati iteration from CartPole-v1's Euler step,
+linearised about the upright pole, with textbook unit costs. It reads the true state rather than the
+fly's senses and learns nothing. Its force is 0.91 x + 2.13 x' + 30.6 θ + 7.84 θ' (SI units), so like
+the landmark fly it first pushes a cart that is right of centre further right, which tips the pole
+back toward the centre.
+
+The first evaluation used seeds 260-279 and the circuit's learning rates; the fly's numbers come from
+its own evaluations ([results/linear](results/linear/summary.md),
+[results/linear-station](results/linear-station/summary.md)).
+
+| condition | seeds | final-100 mean | 2,000-step episodes: track exits | pole falls | mean distance from centre |
+|---|---|---|---|---|---|
+| `fly-reflex` (untuned) | 160-179 | 275.6 | | | |
+| `linear` (untuned) | 260-279 | 310.2 | | | |
+| `fly-reflex-adaptive` | 160-179 | 499.9 | | | |
+| `linear-adaptive` | 260-279 | 499.7 | | | |
+| `fly-reflex-station-staged-motion` | 240-259 | 500.0 | 0 of 200 | 0 | 0.12 m |
+| `linear-station-staged-motion` | 260-279 | 498.8 | 21 of 200 | 15 | 0.32 m |
+
+Untuned, the linear map did better than the circuit (two-sided permutation p = 0.0001). Self-tuned
+without a landmark, the two did not differ (p = 0.34). With the landmark and the curriculum, the circuit
+did better on every measure (500-step score p = 0.0015, distance from centre p = 0.0001, long-episode
+length p = 0.0003).
+
+The rates had been chosen on the circuit, so I then searched the same six rate settings for the linear
+controller on tuning seeds 100-109 ([results/linear-tune](results/linear-tune/tuning.json)). The
+ranking matched the circuit's and the same rates won (η = σ = 0.3). A second evaluation on seeds
+280-299 used those rates and added LQR ([results/linear-retuned](results/linear-retuned/summary.md),
+[results/linear-retuned-station](results/linear-retuned-station/summary.md)).
+
+| condition | seeds | final-100 mean | 2,000-step episodes: track exits | pole falls | mean distance from centre |
+|---|---|---|---|---|---|
+| `linear-adaptive` | 280-299 | 499.6 | | | |
+| `linear-station-staged-motion` | 280-299 | 499.2 | 8 of 200 | 9 | 0.26 m |
+| `lqr` | 280-299 | 500.0 | 0 of 200 | 0 | 0.20 m |
+
+Against the circuit, the self-tuned map again did not differ (p = 0.18), and with the landmark and the
+curriculum the circuit again did better (500-step score p = 0.0003, distance p = 0.0001, length p = 0.009).
+
+What this shows:
+
+- Balancing alone needs nothing beyond a small linear controller. Once tuned, the circuit's own map does
+  as well as the circuit, and LQR does it without learning anything. Before tuning, the map even beats
+  the circuit.
+- Holding station under the same learning rule and rates, the circuit did clearly better than its map,
+  on both seed sets. Since the two share signs and ratios, the difference has to come from the
+  circuit's dynamics. One measured hint: the pathways settle at different speeds. After one step of a
+  constant input, the ocellar pathway has reached 20% of its settled steer and the haltere pathway 68%.
+  Whether this filtering is what helps station keeping has not been tested.
+- The circuit and its map ran on different seed sets and were compared with unpaired permutation tests.
+  LQR's costs were not chosen for centring, and a heavier position cost would hold the cart closer, so
+  its 0.20 m does not mean the circuit beats an engineered controller.
+
 ### Measured versus invented
 
 - **Measured:** every connection on the paths above and its synapse count; each neuron's predicted
@@ -231,6 +298,9 @@ the pole never fell.
 
 ### Where it falls short
 
+- For balancing alone the circuit is no better than a small linear controller, and LQR needs no
+  learning at all. The circuit beats its own linear map only at holding station, and why its dynamics
+  help there has not been shown.
 - How much the curriculum and the landmark's motion each contribute is unknown. Staging alone did
   worse on the tuning seeds, but the motion term without the curriculum was never measured.
 - The curriculum switches at a fixed point, episode 300 of 600; the fly does not decide for itself
@@ -247,7 +317,8 @@ the pole never fell.
   movements.
 - The probes that set the haltere sign and the sensor scaling ran on seeds 100-159 and 500-519;
   tuning used seeds 100-109, the first evaluation seeds 160-179, the landmark evaluation
-  seeds 180-199, the two records seeds 200-239 and the curriculum seeds 240-259.
+  seeds 180-199, the two records seeds 200-239, the curriculum seeds 240-259 and the linear controller
+  seeds 260-299 (its rates were searched on seeds 100-109).
 
 ## Part 2: the mushroom body fly
 

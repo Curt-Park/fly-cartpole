@@ -40,7 +40,7 @@ lasts at most 500 steps.
 | self-tuning, circuit replaced by a linear controller | three sensor gains | 280-299 | 499.6 ± 0.7 |
 | **landmark + curriculum learning** | five sensor gains | 240-259 | **500.0 ± 0.0** |
 | landmark + curriculum learning, circuit replaced by a linear controller | five sensor gains | 280-299 | 499.2 ± 1.1 |
-| LQR (designed from CartPole's equations, no learning) | – | 280-299 | 500.0 ± 0.0 |
+| LQR (designed from CartPole's equations, no learning) | – | 300-319 | 500.0 ± 0.0 |
 | random pushes (baseline) | – | 160-179 | 22.1 ± 0.8 |
 
 What I find most interesting is that the wired circuit, with no tuning at all, already lasts 275.6
@@ -58,7 +58,7 @@ keep the pole up for as long as possible.
 | tuned only to keep the pole up | 240-259 | 10 of 200 | 0 | 0.48 m |
 | **curriculum learning** | 240-259 | **0 of 200** | **0** | **0.12 m** |
 | curriculum learning, circuit replaced by a linear controller | 280-299 | 8 of 200 | 9 | 0.26 m |
-| LQR | 280-299 | 0 of 200 | 0 | 0.20 m |
+| LQR | 300-319 | 0 of 200 | 0 | 0.03 m |
 
 ### How much the circuit itself matters
 
@@ -74,13 +74,15 @@ computed from CartPole's equations, as a baseline.
 - Holding station under the same learning is different. I evaluated the linear controller on two fresh
   seed sets, and both times the circuit did clearly better: the circuit never failed and stayed 0.12 m
   from the centre, while the linear controller failed 36 and 17 times out of 200 and stayed 0.32 and
-  0.26 m away. The circuit's dynamics seem to help, though I have not yet shown why.
+  0.26 m away. The circuit's dynamics seem to help, though I have not yet shown why. An engineered
+  controller still does far better: LQR keeps the cart 0.03 m from the centre on average.
 - None of this is evidence about real flies: the neurons are linear rate units, and the mapping from
   CartPole to the fly's senses is my own.
 
 The full numbers and permutation tests are in [reflex fly](results/reflex/summary.md),
-[landmark + curriculum learning](results/staged/summary.md) and the linear controller and LQR
-([balancing](results/linear-retuned/summary.md), [holding station](results/linear-retuned-station/summary.md)).
+[landmark + curriculum learning](results/staged/summary.md), the linear controller
+([balancing](results/linear-retuned/summary.md), [holding station](results/linear-retuned-station/summary.md))
+and [LQR](results/lqr-station/summary.md).
 
 ## What finally worked
 
@@ -118,7 +120,9 @@ uv run fly-cartpole reflex-tune      # pick the self-tuning rates on tuning seed
 uv run fly-cartpole station-compare --seeds 240-259 \
   --conditions fly-reflex-station-staged-motion,fly-reflex-station --results results/staged
 uv run fly-cartpole station-compare --seeds 280-299 \
-  --conditions linear-station-staged-motion,lqr --references results/staged --results results/linear-retuned-station
+  --conditions linear-station-staged-motion --references results/staged --results results/linear-retuned-station
+uv run fly-cartpole station-compare --seeds 300-319 \
+  --conditions lqr --references results/staged,results/linear-retuned-station --results results/lqr-station
 uv run fly-cartpole export-flight    # tune the viewer's fly on seed 0 and write web/data/flight.json
 uv run pytest
 ```

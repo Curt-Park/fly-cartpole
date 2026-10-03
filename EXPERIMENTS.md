@@ -8,8 +8,8 @@ where the project ended up; Part 2 covers my first attempt, with the mushroom bo
 evaluated them once on seeds no earlier run had touched. The evaluation seeds were spent in this
 order: 0-89 on the mushroom body fly (five evaluations, all reported below), 160-179 on the reflex fly
 without a landmark, 180-199 on the landmark, 200-219 and 220-239 on two ways of judging an episode,
-240-259 on curriculum learning with the landmark's motion, and 260-279 and 280-299 on comparing the
-circuit with its own linear controller and with LQR.
+240-259 on curriculum learning with the landmark's motion, 260-279 and 280-299 on comparing the
+circuit with its own linear controller and with LQR, and 300-319 on an LQR with a heavier position cost.
 
 ## Part 1: the reflex fly
 
@@ -278,8 +278,19 @@ What this shows:
   constant input, the ocellar pathway has reached 20% of its settled steer and the haltere pathway 68%.
   Whether this filtering is what helps station keeping has not been tested.
 - The circuit and its map ran on different seed sets and were compared with unpaired permutation tests.
-  LQR's costs were not chosen for centring, and a heavier position cost would hold the cart closer, so
-  its 0.20 m does not mean the circuit beats an engineered controller.
+
+**A fairer LQR (seeds 300-319).** The LQR above used textbook unit costs, which weigh a metre of cart
+position like a radian of tilt. It therefore let the cart drift in slow swings: its slowest closed-loop
+modes are an oscillating pair that decays by 1/e only every 1.2 s, and CartPole's all-or-nothing pushes
+add chatter around the centre. A check against finite differences of Gymnasium's own step confirmed
+the linearisation, so this was the cost, not an error. On tuning seeds 100-109, raising the position cost
+to 10, 100, 1,000 and 10,000 brought the mean distance from the centre down from 0.198 m to 0.074, 0.028,
+0.011 and 0.005 m, with no exit or fall in any setting. I took 100 and evaluated it once on seeds 300-319
+([results/lqr-station](results/lqr-station/summary.md)): every seed scored 500, none of the 200 long
+episodes failed, and the cart stayed 0.029 m from the centre on average. An engineered linear
+controller holds station far more tightly than the fly; the circuit's advantage is only over its own
+linear map, learning the same way.
+
 
 ### Measured versus invented
 
@@ -299,8 +310,8 @@ What this shows:
 ### Where it falls short
 
 - For balancing alone the circuit is no better than a small linear controller, and LQR needs no
-  learning at all. The circuit beats its own linear map only at holding station, and why its dynamics
-  help there has not been shown.
+  learning at all; at holding station LQR is far better than the fly. The circuit beats only its own
+  linear map, at holding station, and why its dynamics help there has not been shown.
 - How much the curriculum and the landmark's motion each contribute is unknown. Staging alone did
   worse on the tuning seeds, but the motion term without the curriculum was never measured.
 - The curriculum switches at a fixed point, episode 300 of 600; the fly does not decide for itself
@@ -318,7 +329,8 @@ What this shows:
 - The probes that set the haltere sign and the sensor scaling ran on seeds 100-159 and 500-519;
   tuning used seeds 100-109, the first evaluation seeds 160-179, the landmark evaluation
   seeds 180-199, the two records seeds 200-239, the curriculum seeds 240-259 and the linear controller
-  seeds 260-299 (its rates were searched on seeds 100-109).
+  seeds 260-299 (its rates were searched on seeds 100-109) and the position-weighted LQR seeds 300-319
+  (its cost was chosen on seeds 100-109).
 
 ## Part 2: the mushroom body fly
 

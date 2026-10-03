@@ -39,7 +39,7 @@
 | 자가튜닝, 회로를 선형 제어기로 교체 | 감각 계수 3개 | 280-299 | 499.6 ± 0.7 |
 | **랜드마크 + 커리큘럼 러닝** | 감각 계수 5개 | 240-259 | **500.0 ± 0.0** |
 | 랜드마크 + 커리큘럼 러닝, 회로를 선형 제어기로 교체 | 감각 계수 5개 | 280-299 | 499.2 ± 1.1 |
-| LQR (카트폴 방정식으로 설계, 학습 없음) | – | 280-299 | 500.0 ± 0.0 |
+| LQR (카트폴 방정식으로 설계, 학습 없음) | – | 300-319 | 500.0 ± 0.0 |
 | 무작위로 밀기 (기준선) | – | 160-179 | 22.1 ± 0.8 |
 
 개인적으로 가장 재밌었던 점은 커넥톰에서 가져온 회로를 아무 튜닝 없이 그대로 써도 평균 275.6스텝을
@@ -56,7 +56,7 @@
 | 오래 세우는 것만으로 튜닝 | 240-259 | 200번 중 10번 | 0번 | 0.48 m |
 | **커리큘럼 러닝** | 240-259 | **200번 중 0번** | **0번** | **0.12 m** |
 | 커리큘럼 러닝, 회로를 선형 제어기로 교체 | 280-299 | 200번 중 8번 | 9번 | 0.26 m |
-| LQR | 280-299 | 200번 중 0번 | 0번 | 0.20 m |
+| LQR | 300-319 | 200번 중 0번 | 0번 | 0.03 m |
 
 ### 회로 자체는 얼마나 중요한가
 
@@ -73,13 +73,14 @@
   세트에서 평가했는데, 두 번 모두 회로가 확실히 나았다. 회로는 한 번도 실패하지 않고 가운데에서
   평균 0.12 m 떨어져 있었던 반면, 선형 제어기는 200번 중 36번과 17번 실패했고 0.32 m와 0.26 m
   떨어져 있었다. 회로의 시간적 동역학이 도움이 되는 것으로 보이는데, 그 이유는 아직 확인하지 못했다.
+  물론 엔지니어가 설계한 제어기는 훨씬 더 잘한다. LQR은 카트를 가운데에서 평균 0.03 m 거리에 붙잡아 둔다.
 - 이 결과들이 실제 초파리에 대한 증거는 아니다. 신경세포는 선형 발화율 모델이고, 카트폴을 초파리
   감각에 대응시킨 방식도 내가 정한 것이다.
 
 자세한 수치와 순열 검정 결과는 [반사 초파리](results/reflex/summary.md),
-[랜드마크 + 커리큘럼 러닝](results/staged/summary.md), 선형 제어기와 LQR
-([막대기 세우기](results/linear-retuned/summary.md), [제자리 지키기](results/linear-retuned-station/summary.md))에
-정리되어 있다.
+[랜드마크 + 커리큘럼 러닝](results/staged/summary.md), 선형 제어기
+([막대기 세우기](results/linear-retuned/summary.md), [제자리 지키기](results/linear-retuned-station/summary.md)),
+[LQR](results/lqr-station/summary.md)에 정리되어 있다.
 
 ## 최종적으로 효과가 있었던 아이디어와 메커니즘
 
@@ -114,7 +115,9 @@ uv run fly-cartpole reflex-tune      # 튜닝용 시드 100-109로 자가튜닝 
 uv run fly-cartpole station-compare --seeds 240-259 \
   --conditions fly-reflex-station-staged-motion,fly-reflex-station --results results/staged
 uv run fly-cartpole station-compare --seeds 280-299 \
-  --conditions linear-station-staged-motion,lqr --references results/staged --results results/linear-retuned-station
+  --conditions linear-station-staged-motion --references results/staged --results results/linear-retuned-station
+uv run fly-cartpole station-compare --seeds 300-319 \
+  --conditions lqr --references results/staged,results/linear-retuned-station --results results/lqr-station
 uv run fly-cartpole export-flight    # 시드 0으로 웹뷰어용 초파리를 튜닝해서 web/data/flight.json 생성
 uv run pytest
 ```

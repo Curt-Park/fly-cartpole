@@ -272,3 +272,10 @@ def test_reflex_tune_can_tune_another_condition(flight_path, tmp_path):
     reflex_tune(seeds=[0], workers=1, flight_path=flight_path, results_dir=tmp_path, etas=(0.1,), sigmas=(0.1,), base=QUICK,
                 condition="linear-adaptive")
     assert json.loads((tmp_path / "tuning.json").read_text())["condition"] == "linear-adaptive"
+
+
+def test_the_lqr_weighs_the_cart_s_position_a_hundred_times_the_rest():
+    from fly_cartpole.reflex_report import LQRController, cartpole_linearisation, lqr_gains
+
+    expected = lqr_gains(*cartpole_linearisation(), np.diag([100.0, 1.0, 1.0, 1.0]))
+    assert LQRController().gains == pytest.approx(expected)

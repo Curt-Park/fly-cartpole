@@ -29,3 +29,12 @@ def test_the_committed_viewer_data_runs_in_the_browser_as_in_python():
     data = Path(__file__).parents[1] / "web" / "data" / "flight.json"
     result = subprocess.run(["node", str(TESTS / "reflex_parity.mjs"), str(data)], capture_output=True, text=True)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_the_committed_viewer_runs_the_current_lqr():
+    import json
+
+    from fly_cartpole.reflex_report import LQRController
+
+    model = json.loads((Path(__file__).parents[1] / "web" / "data" / "flight.json").read_text())
+    assert model["lqr"]["gains"] == pytest.approx(LQRController().gains.tolist())

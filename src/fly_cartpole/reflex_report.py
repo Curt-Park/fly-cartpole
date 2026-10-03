@@ -33,6 +33,8 @@ LINEAR_STAGED_MOTION = "linear-station-staged-motion"
 LINEAR_CONDITIONS = (LINEAR, LINEAR_ADAPTIVE, LINEAR_STAGED_MOTION)
 # The engineer's reference: a linear controller designed from CartPole's equations, not learned.
 LQR = "lqr"
+# Unit costs leave the cart drifting about 0.2 m; a heavier position cost, chosen on tuning seeds, holds it near the centre.
+LQR_STATE_COST = np.diag([100.0, 1.0, 1.0, 1.0])
 STAGED = (STATION_STAGED, STATION_STAGED_MOTION, LINEAR_STAGED_MOTION)
 ADAPTIVE = ("fly-reflex-adaptive", "fly-reflex-adaptive-shuffled", STATION, STATION_CENTRED, STATION_BALANCED, STATION_MOTION,
             LINEAR_ADAPTIVE) + STAGED
@@ -142,7 +144,7 @@ def cartpole_linearisation() -> tuple[np.ndarray, np.ndarray]:
 
 def lqr_gains(transition: np.ndarray, push: np.ndarray, state_cost: np.ndarray | None = None, force_cost: float = 1.0,
               max_iterations: int = 100_000) -> np.ndarray:
-    """Infinite-horizon discrete LQR by Riccati iteration; textbook unit costs, nothing tuned to CartPole's score."""
+    """Infinite-horizon discrete LQR by Riccati iteration; unit costs unless a state cost is given."""
     state_cost = np.eye(len(transition)) if state_cost is None else state_cost
     cost_to_go = state_cost
     for _ in range(max_iterations):
@@ -158,7 +160,7 @@ class LQRController:
     """Pushes with the sign of the LQR force; CartPole-v1 only offers full pushes either way."""
 
     def __init__(self) -> None:
-        self.gains = lqr_gains(*cartpole_linearisation())
+        self.gains = lqr_gains(*cartpole_linearisation(), LQR_STATE_COST)
         self.released = (0.0, 0.0)
 
     def reset_episode(self) -> None:
